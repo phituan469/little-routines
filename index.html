@@ -161,12 +161,32 @@
     55%{transform:translateX(-50%) translateY(-70%) rotate(-200deg)}
     100%{transform:translateX(-50%) translateY(0) rotate(-360deg)}
   }
+  /* Friend went away: droops, then trudges off to the left; comes back with a hop */
+  .anim-leave{animation:leave 4.2s ease-in 1 forwards}
+  @keyframes leave{
+    0%  {transform:translateX(-50%) translateY(0) rotate(0)}
+    22% {transform:translateX(-50%) translateY(3%) rotate(-7deg)}
+    30% {transform:translateX(calc(-50% - 4cqw)) translateY(1%) rotate(-7deg)}
+    100%{transform:translateX(calc(-50% - 140cqw)) translateY(3%) rotate(-7deg)}
+  }
+  .anim-return{animation:comeback 3s ease-out 1}
+  @keyframes comeback{
+    0%  {transform:translateX(calc(-50% - 140cqw)) translateY(0)}
+    65% {transform:translateX(calc(-50% + 5cqw)) translateY(0)}
+    80% {transform:translateX(calc(-50% - 2cqw)) translateY(-14%) rotate(-6deg)}
+    92% {transform:translateX(-50%) translateY(0) rotate(4deg)}
+    100%{transform:translateX(-50%) translateY(0) rotate(0)}
+  }
+  .sad .eye{transform:scaleY(.55) translateY(2px)}
+  .sad .mouth-open{opacity:0}
+  .animal-wrap.gone{display:none}
+  body.away .friend-tag{border-color:#E0554B}
   .anim-hello{animation:hello .9s ease-in-out 1}
   @keyframes hello{0%,100%{transform:translateX(-50%) rotate(0)}25%{transform:translateX(-50%) rotate(-8deg) scale(1.06)}75%{transform:translateX(-50%) rotate(8deg) scale(1.06)}}
   @media (prefers-reduced-motion:reduce){
     .animal,.sun,.cloud{animation:none}
     .anim-spin,.anim-jump,.anim-roll,.anim-rollback,.anim-grow,.anim-dance,.anim-flip,.anim-exit,.anim-launch,
-    .anim-hero-stomp{animation:hello .9s ease-in-out 1}
+    .anim-hero-stomp,.anim-leave,.anim-return{animation:hello .9s ease-in-out 1}
     .cape{animation:none}
   }
 
@@ -549,6 +569,10 @@
       <button class="btn" id="undo">↩︎ <span>Undo last step</span></button>
       <button class="btn warn" id="reset">🔄 <span>Reset today</span></button>
     </div>
+    <div class="row">
+      <button class="btn warn" id="away">😢 <span>Friend went away</span></button>
+      <button class="btn primary" id="return" hidden>🎉 <span>Bring friend back</span></button>
+    </div>
     <div class="sheet-label" id="pick-label">Today's friend</div>
     <div class="animals" id="animal-picker"></div>
     <div class="sheet-label" id="edit-label">Edit routines</div>
@@ -667,6 +691,7 @@
       allDoneNight:'Good night!', allDoneNightSub:'The whole town is asleep. Sleep tight.', bannerNight:'Everyone is asleep — good night 🌙',
       hold:'Keep holding…', soundOn:'Sound on', soundOff:'Sound off', modeMorning:'Morning routine', modeNight:'Night routine',
       greetAdhoc:"Let's do it!", modeAdhoc:'Any time', tilesHint:'Grown-ups: hold a task to add it (3 at a time)', maxToast:'3 tasks at a time',
+      awayBtn:'Friend went away', backBtn:'Bring friend back', awayTag:(a)=>`${a} went away…`,
       editTitle:'Edit routines', editMorning:'Morning', editNight:'Night', addTask:'Add a task to the end:', maxTasks:'Max', minTask:'Keep at least one task', steps:'steps',
     },
     sv:{
@@ -677,6 +702,7 @@
       allDoneNight:'God natt!', allDoneNightSub:'Hela staden sover. Sov gott.', bannerNight:'Alla sover — god natt 🌙',
       hold:'Håll kvar…', soundOn:'Ljud på', soundOff:'Ljud av', modeMorning:'Morgonrutin', modeNight:'Kvällsrutin',
       greetAdhoc:'Nu kör vi!', modeAdhoc:'När som helst', tilesHint:'Vuxna: håll en uppgift för att lägga till (3 åt gången)', maxToast:'3 uppgifter åt gången',
+      awayBtn:'Kompisen gick sin väg', backBtn:'Hämta tillbaka kompisen', awayTag:(a)=>`${a} gick sin väg…`,
       editTitle:'Ändra rutiner', editMorning:'Morgon', editNight:'Kväll', addTask:'Lägg till en uppgift sist:', maxTasks:'Max', minTask:'Behåll minst en uppgift', steps:'steg',
     }
   };
@@ -837,7 +863,7 @@
   settings.sound = settings.sound !== false;
   if (!settings.routines || !Array.isArray(settings.routines.morning) || !Array.isArray(settings.routines.night)) settings.routines = { morning: DEFAULT_ROUTINES.morning.slice(), night: DEFAULT_ROUTINES.night.slice() };
   buildRoutines(settings.routines);
-  const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null});
+  const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null, away: false});
   let day = load('mf_day', null);
   if (!day || day.date !== todayKey()) day = freshDay();
   if (!Array.isArray(day.nightDone)) day.nightDone = [];
@@ -978,6 +1004,8 @@
       [N.C5,N.E5,N.G5,N.C6].forEach((f,i)=>tone(f,.3,{when:4.5+i*.09,vol:.18}));
     },
     hello(){ tone(N.E5,.12,{vol:.14}); tone(N.G5,.2,{when:.12,vol:.14}); },
+    sad(){ [N.E4,N.D4,N.C4].forEach((f,i)=>tone(f,.9,{type:'sawtooth',vol:.09,when:i*.7,to:f*0.94})); tone(N.C4*0.5, 1.6, {type:'sine', vol:.08, when:2.1, to:N.C4*0.42}); },
+    back(){ [N.C5,N.E5,N.G5].forEach((f,i)=>tone(f,.25,{when:1.9+i*.12,vol:.16})); tone(N.C6,.5,{when:2.3,vol:.16}); },
     click(){ tone(1200,.05,{vol:.06}); },
     fanfare(){ [N.C5,N.C5,N.C5,N.E5,N.G5,N.C6].forEach((f,i)=>tone(f, i<3?.14:.4, {type:'triangle',vol:.2,when:[0,.15,.3,.45,.75,1.1][i]})); [N.E5,N.G5,N.C6].forEach((f,i)=>tone(f,1.2,{vol:.08,when:1.1+i*.02})); },
     // Night: a soft light-switch click for each window, a breathy puff for each smoke ring, a sleepy chime at the end
@@ -1089,12 +1117,20 @@
     const hs = document.querySelector(`#town .house[data-i="${i}"]`);
     const wins = hs ? hs.querySelectorAll('.win') : [], glow = hs && hs.querySelector('.glow'), rings = hs ? hs.querySelectorAll('.ring') : [];
     const n = ROUTINES.night.steps.length;
+    const off = el => el && el.classList.add('off');
+    if (isAway()){
+      SFX.lightOff(0.3); SFX.lightOff(0.9);
+      setTimeout(()=>off(wins[0]), 300);
+      setTimeout(()=>{ wins.forEach(off); off(glow); off(hs); }, 900);
+      [1.5, 2.0, 2.5].forEach((t,k)=>{ SFX.puff(t); setTimeout(()=>{ if (rings[k]){ rings[k].classList.remove('puff'); void rings[k].getBBox(); rings[k].classList.add('puff'); } }, t*1000); });
+      setTimeout(()=>{ cb && cb(); }, 3400);
+      return;
+    }
     wrap.style.setProperty('--dx', (((i + 0.5) * 100 / n) - HERO_LEFT) + 'cqw');
     wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-hero-stomp'); animalEl.classList.add('happy');
     SFX.hero_stomp();
     // each landing shakes the house
     [1960, 2740, 3530, 4370].forEach(t => setTimeout(()=>{ if (hs){ hs.classList.remove('stomp'); void hs.getBBox(); hs.classList.add('stomp'); } }, t));
-    const off = el => el && el.classList.add('off');
     SFX.lightOff(4.45); SFX.lightOff(4.95);
     setTimeout(()=>off(wins[0]), 4450);
     setTimeout(()=>{ wins.forEach(off); off(glow); off(hs); }, 4950);
@@ -1107,11 +1143,13 @@
   const wrap = $('#wrap'), animalEl = $('#animal');
   const isAsleep = () => day.nightDone.length >= ROUTINES.night.steps.length;
   // The wrap's resting classes: on the moon once the night routine is finished, otherwise just the wrap
-  const restWrap = () => 'animal-wrap' + (isNight() && isAsleep() ? ' on-moon' : '');
+  const isAway = () => !!day.away;
+  const restWrap = () => 'animal-wrap' + (isAway() ? ' gone' : isNight() && isAsleep() ? ' on-moon' : '');
   function renderAnimal(){
     const a = ANIMALS[animalIdx()];
     animalEl.innerHTML = svgWrap(a.svg);
-    $('#friend-name').textContent = animalName(a);
+    $('#friend-name').textContent = isAway() ? t().awayTag(animalName(a)) : animalName(a);
+    animalEl.classList.toggle('sad', isAway());
     document.querySelectorAll('#animal-picker button').forEach((b,i)=>b.setAttribute('aria-pressed', String(i===animalIdx())));
   }
   function renderText(){
@@ -1123,7 +1161,10 @@
     $('#list').setAttribute('aria-label', isAdhoc() ? s.modeAdhoc : night ? s.modeNight : s.modeMorning);
     document.querySelectorAll('.tile').forEach((el,i)=>{ el.querySelector('small').textContent = stepName(ROUTINES.adhoc.steps[i]); });
     if (!$('#sheet').hidden) renderEditor();
-    $('#friend-label').textContent = night ? s.hero : s.friend;
+    $('#friend-label').textContent = isAway() ? '' : night ? s.hero : s.friend;
+    $('#away').lastElementChild.textContent = s.awayBtn; $('#return').lastElementChild.textContent = s.backBtn;
+    $('#away').hidden = isAway(); $('#return').hidden = !isAway();
+    document.body.classList.toggle('away', isAway());
     $('#date').textContent = new Date().toLocaleDateString(settings.lang==='sv'?'sv-SE':'en-GB',{weekday:'short', day:'numeric', month:'short'});
     $('#undo').lastElementChild.textContent = s.undo;
     $('#reset').lastElementChild.textContent = s.reset;
@@ -1328,11 +1369,17 @@
       const remaining = steps().filter(x => !doneList().includes(x.id));
       if (!remaining.length) (isNight() ? nightFinale : finale)();
     };
-    if (isAdhoc()){ day.adhocDoneAt[s.id] = Date.now(); save('mf_day', day); renderTiles(); launchStep(()=>{ busy = false; }); }
+    if (isAdhoc()){ day.adhocDoneAt[s.id] = Date.now(); save('mf_day', day); renderTiles(); if (isAway()) fireworksOnly(()=>{ busy = false; }); else launchStep(()=>{ busy = false; }); }
     else if (isNight()) heroStep(i, after);
+    else if (isAway()){ SFX.click(); [N.C5,N.E5].forEach((f,k)=>tone(f,.25,{when:k*.12,vol:.14})); setTimeout(after, 900); }
     else playAnim(s.anim, after, s.sfx);
   }
   // Any time: rocket launch, fireworks, parachute home
+  function fireworksOnly(cb){
+    const bursts = [{t:0.6,big:false},{t:1.25,big:true},{t:1.9,big:false},{t:2.55,big:true}];
+    bursts.forEach(b => { tone(600,.35,{type:'triangle',vol:.08,when:b.t-0.45,to:1600}); SFX.boom(b.t, b.big); });
+    fireworks(bursts); setTimeout(()=>cb && cb(), 4200);
+  }
   function launchStep(cb){
     const bursts = [{t:4.0,big:false},{t:4.65,big:true},{t:5.3,big:false},{t:5.95,big:true}];
     wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-launch'); animalEl.classList.add('happy');
@@ -1344,11 +1391,13 @@
   }
   function finale(){
     $('#finale').hidden = false; SFX.fanfare(); confetti();
+    if (isAway()) return;
     wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-dance'); animalEl.classList.add('happy');
     setTimeout(()=>{ wrap.className='animal-wrap'; animalEl.classList.remove('happy'); }, 4000);
   }
   // Good night: the hero flies up and lands on the moon; the sky dims, the moon closes its eyes, z's drift up
   function nightFinale(){
+    if (isAway()){ document.body.classList.add('asleep'); SFX.goodnight(); setTimeout(()=>{ $('#finale').hidden = false; }, 900); return; }
     busy = true;
     wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-hero-land'); SFX.hero_land();
     setTimeout(()=>{
@@ -1358,9 +1407,28 @@
     }, 2600);
   }
   $('#finale').addEventListener('click', ()=>{ $('#finale').hidden = true; });
+  // Friend went away (until midnight) / bring friend back
+  function sendAway(){
+    if (busy || isAway()) return;
+    busy = true; closeSheet();
+    day.away = true; save('mf_day', day);
+    animalEl.classList.add('sad'); document.body.classList.add('away');
+    wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-leave'); SFX.sad();
+    setTimeout(()=>{ busy = false; wrap.className = restWrap(); renderAnimal(); renderText(); }, 4300);
+  }
+  function bringBack(){
+    if (busy || !isAway()) return;
+    busy = true; closeSheet();
+    day.away = false; save('mf_day', day);
+    document.body.classList.remove('away'); animalEl.classList.remove('sad'); renderAnimal(); renderText();
+    wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-return'); SFX.back();
+    setTimeout(()=>{ busy = false; wrap.className = restWrap(); }, 3000);
+  }
+  $('#away').addEventListener('click', sendAway);
+  $('#return').addEventListener('click', bringBack);
   document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', ()=>{ if (mode !== b.dataset.mode){ SFX.click(); setMode(b.dataset.mode); } }));
 
-  animalEl.addEventListener('click', ()=>{ if (busy || (isNight() && isAsleep())) return; playAnim('hello'); });
+  animalEl.addEventListener('click', ()=>{ if (busy || isAway() || (isNight() && isAsleep())) return; playAnim('hello'); });
   animalEl.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); animalEl.click(); } });
 
   document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', ()=>{ settings.lang = b.dataset.lang; save('mf_settings', settings); SFX.click(); renderAnimal(); renderText(); }));
