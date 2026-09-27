@@ -177,6 +177,22 @@
     92% {transform:translateX(-50%) translateY(0) rotate(4deg)}
     100%{transform:translateX(-50%) translateY(0) rotate(0)}
   }
+  /* At night the hero perches on the left, so it leaves and returns across the sky to the right instead */
+  body.night .anim-leave{animation-name:leaveRight}
+  @keyframes leaveRight{
+    0%  {transform:translateX(-50%) translateY(0) rotate(0)}
+    22% {transform:translateX(-50%) translateY(3%) rotate(7deg)}
+    30% {transform:translateX(calc(-50% + 4cqw)) translateY(1%) rotate(7deg)}
+    100%{transform:translateX(calc(-50% + 140cqw)) translateY(3%) rotate(7deg)}
+  }
+  body.night .anim-return{animation-name:comebackRight}
+  @keyframes comebackRight{
+    0%  {transform:translateX(calc(-50% + 140cqw)) translateY(0)}
+    65% {transform:translateX(calc(-50% - 5cqw)) translateY(0)}
+    80% {transform:translateX(calc(-50% + 2cqw)) translateY(-14%) rotate(6deg)}
+    92% {transform:translateX(-50%) translateY(0) rotate(-4deg)}
+    100%{transform:translateX(-50%) translateY(0) rotate(0)}
+  }
   .sad .eye{transform:scaleY(.55) translateY(2px)}
   .sad .mouth-open{opacity:0}
   .animal-wrap.gone{display:none}
@@ -418,7 +434,7 @@
   body.adhoc .greet{color:#FFF4EA}
   body.adhoc .greet small{color:#F5D6E0}
   body.adhoc .stars,body.adhoc #banner{display:none}
-  .tiles{display:none;grid-template-columns:repeat(7,1fr);gap:8px;padding:2px 0 4px}
+  .tiles{display:none;grid-template-columns:repeat(8,1fr);gap:8px;padding:2px 0 4px}
   @media (max-width:560px){.tiles{grid-template-columns:repeat(4,1fr)}.tile svg{width:40px;height:40px}}
   body.adhoc .tiles{display:grid}
   .tile{
@@ -633,6 +649,9 @@
       <path d="M17 19.5 C15 12 19 9.5 24 9.5 C29 9.5 32.5 13 31 19.5 Z" fill="#8E5A2B"/>
       <path d="M12 29.5 C18 27 27 27.5 38 29.5 M17 19.5 C21 17.5 27 18 31 19.5" fill="none" stroke="#5E3A17" stroke-width="2.2"/>
       <path d="M9 39 C11 34.5 15 33 20 33.5 M15 25.5 C17 22.5 20 22 23 22.3 M20 15.5 C21.5 12.8 23.5 12.5 25 12.8" fill="none" stroke="#B9835A" stroke-width="2.2" stroke-linecap="round"/></g>`),
+    dressed: I(`<path d="M17 7 L24 10 L31 7 L42 12 L38 21 L33 19 V41 H15 V19 L10 21 L6 12 Z" fill="#5AA9FF"/>
+      <path d="M17 7 Q24 15 31 7" fill="none" stroke-width="2.5"/>
+      <path d="M20 26 h8 M20 31 h8" stroke="#FFFFFF" stroke-width="2.5"/>`),
     hands: I(`<path d="M13 40 V22 Q13 18 17 18 Q21 18 21 22 V14 Q21 10 25 10 Q29 10 29 14 V12 Q29 8 33 8 Q37 8 37 12 V16 Q37 12 41 12 Q45 12 45 16 V30 Q45 40 36 43 H21 Q13 43 13 40 Z" fill="#F5D0B5"/>
       <path d="M21 22 V30 M29 14 V30 M37 16 V30" stroke="#C99A78" stroke-width="2"/>
       <circle cx="10" cy="14" r="4" fill="#DDF0FF" stroke-width="2"/><circle cx="7" cy="25" r="2.5" fill="#DDF0FF" stroke-width="2"/><circle cx="15" cy="8" r="2.5" fill="#DDF0FF" stroke-width="2"/>
@@ -647,8 +666,9 @@
     poop:   {icon:ICON.poop,   en:'Potty',       sv:'Bajsa'},
     shower: {icon:ICON.shower, en:'Shower',      sv:'Duscha'},
     hands:  {icon:ICON.hands,  en:'Wash hands',  sv:'Tvätta händerna'},
+    dressed:{icon:ICON.dressed,en:'Get dressed', sv:'Klä på sig'},
   };
-  const TASK_ORDER = ['pee','teeth','water','food','poop','shower','hands'];
+  const TASK_ORDER = ['pee','teeth','water','food','poop','shower','hands','dressed'];
   const DEFAULT_ROUTINES = { morning:['pee','teeth','water','food','water','poop'], night:['food','water','pee','teeth'] };
   const ROUTINE_MAX = { morning:8, night:6 };
   // Morning animations are handed out by position so a routine of any length stays varied
@@ -1407,22 +1427,28 @@
     }, 2600);
   }
   $('#finale').addEventListener('click', ()=>{ $('#finale').hidden = true; });
-  // Friend went away (until midnight) / bring friend back
+  // Friend went away (until midnight) / bring friend back.
+  // Both wait AWAY_DELAY_MS after the button so the grown-up can close the panel and show the child.
+  const AWAY_DELAY_MS = 5000;
   function sendAway(){
     if (busy || isAway()) return;
     busy = true; closeSheet();
-    day.away = true; save('mf_day', day);
-    animalEl.classList.add('sad'); document.body.classList.add('away');
-    wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-leave'); SFX.sad();
-    setTimeout(()=>{ busy = false; wrap.className = restWrap(); renderAnimal(); renderText(); }, 4300);
+    setTimeout(()=>{
+      day.away = true; save('mf_day', day);
+      animalEl.classList.add('sad'); document.body.classList.add('away');
+      wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-leave'); SFX.sad();
+      setTimeout(()=>{ busy = false; wrap.className = restWrap(); renderAnimal(); renderText(); }, 4300);
+    }, AWAY_DELAY_MS);
   }
   function bringBack(){
     if (busy || !isAway()) return;
     busy = true; closeSheet();
-    day.away = false; save('mf_day', day);
-    document.body.classList.remove('away'); animalEl.classList.remove('sad'); renderAnimal(); renderText();
-    wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-return'); SFX.back();
-    setTimeout(()=>{ busy = false; wrap.className = restWrap(); }, 3000);
+    setTimeout(()=>{
+      day.away = false; save('mf_day', day);
+      document.body.classList.remove('away'); animalEl.classList.remove('sad'); renderAnimal(); renderText();
+      wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-return'); SFX.back();
+      setTimeout(()=>{ busy = false; wrap.className = restWrap(); }, 3000);
+    }, AWAY_DELAY_MS);
   }
   $('#away').addEventListener('click', sendAway);
   $('#return').addEventListener('click', bringBack);
