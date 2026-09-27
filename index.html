@@ -1509,10 +1509,12 @@
     const cv = $('#confetti'), cx = cv.getContext('2d'); cv.hidden = false;
     const dpr = Math.min(window.devicePixelRatio||1, 2); cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
     const palette = ['#FF5E7A','#FFD36B','#5AC8FA','#7CFF9B','#FF9B3D','#C77DFF','#FFFFFF'];
-    const stageH = $('#stage').getBoundingClientRect().height;
+    const st = $('#stage').getBoundingClientRect();   // bursts are placed inside the scene, not the whole screen
     const rockets = [], parts = [];
     const RISE = 0.55; // seconds from launch to burst, the same on every screen refresh rate
-    bursts.forEach(b => rockets.push({ launchAt:b.t-RISE, x: innerWidth*(0.15+Math.random()*0.7), y0: innerHeight*0.62, y: innerHeight*0.62, ty: stageH*(0.12+Math.random()*0.35), big:b.big, c:pick(palette), c2:pick(palette), fired:false, exploded:false, trail:0 }));
+    // Bursts land in the middle of the screen: spread around the centre, never out at the edges
+    const spots = [0.40, 0.58, 0.47, 0.55].sort(()=>Math.random()-.5);
+    bursts.forEach((b,i) => rockets.push({ launchAt:b.t-RISE, x: st.left + st.width*(spots[i % spots.length] + (Math.random()-.5)*0.08), y0: st.bottom + 40, y: st.bottom + 40, ty: st.top + st.height*(0.22+Math.random()*0.3), big:b.big, c:pick(palette), c2:pick(palette), fired:false, exploded:false, trail:0 }));
     const flash = $('#flash');
     const t0 = performance.now(); let last = t0;
     (function frame(now){
