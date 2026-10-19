@@ -525,6 +525,7 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
 .train-flying-icon{position:fixed;width:48px;height:48px;z-index:30;pointer-events:none}
 @media(min-width:820px) and (orientation:landscape){#train-scene{inset:90px 12px 45px}}
 </style>
+
 </head>
 <body>
 
@@ -911,7 +912,7 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
   let settings = Object.assign({lang:'en', sound:true}, load('mf_settings', {}));
   if (!T[settings.lang]) settings.lang = 'en';
   settings.sound = settings.sound !== false;
-  settings.version = settings.version === 'train' ? 'train' : 'animal';
+  settings.version = settings.version === 'train' || settings.version === 'aquarium' ? 'train' : 'animal';
   if (!settings.routines || !Array.isArray(settings.routines.morning) || !Array.isArray(settings.routines.night)) settings.routines = { morning: DEFAULT_ROUTINES.morning.slice(), night: DEFAULT_ROUTINES.night.slice() };
   buildRoutines(settings.routines);
   const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null, away: false});
@@ -1422,7 +1423,22 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
     const size = Math.min(1, gap/62);
     const wheels = '<circle cx="-16" cy="-3" r="7" fill="#344566"/><circle cx="16" cy="-3" r="7" fill="#344566"/><circle cx="-16" cy="-3" r="3" fill="#D7E5EF"/><circle cx="16" cy="-3" r="3" fill="#D7E5EF"/>';
     let out = `<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg"><path id="train-route" d="${trainPath}" fill="none" stroke="#A68C70" stroke-width="13" stroke-dasharray="4 9"/><path d="${trainPath}" fill="none" stroke="#667B91" stroke-width="5"/><path d="${trainPath}" fill="none" stroke="#D9E6EE" stroke-width="2"/>`;
-    out += '<g transform="translate(420 170)"><rect width="120" height="29" rx="7" fill="#FFF2CD"/><path d="M-8 0 L60 -24 128 0Z" fill="#E88470"/><text x="60" y="20" text-anchor="middle" font-family="Fredoka, sans-serif" font-size="17" fill="#344566">'+(settings.lang==='sv'?'Lilla stationen':'Little Station')+'</text></g>';
+    out += `<g transform="translate(105 128)" aria-hidden="true">
+      <ellipse cx="65" cy="40" rx="72" ry="5" fill="#344566" opacity=".12"/>
+      <path d="M4 40 V8 H126 V40 H87 V25 A22 20 0 0 0 43 25 V40 Z" fill="#F3D9C4" stroke="#B9957C" stroke-width="1.5"/>
+      <rect x="1" y="3" width="29" height="37" rx="3" fill="#CFE3F5" stroke="#8DAFCB" stroke-width="1.5"/>
+      <rect x="100" y="3" width="29" height="37" rx="3" fill="#CFE3F5" stroke="#8DAFCB" stroke-width="1.5"/>
+      <path d="M-4 5 L15 -8 35 5 Z M95 5 L115 -8 134 5 Z" fill="#C4735A" stroke="#AA624F" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M32 8 Q65 -10 98 8" fill="none" stroke="#C4735A" stroke-width="7" stroke-linecap="round"/>
+      <rect x="9" y="12" width="13" height="14" rx="3" fill="#FFF1B8" stroke="#5B6E9E" stroke-width="1.5"/>
+      <rect x="108" y="12" width="13" height="14" rx="3" fill="#FFF1B8" stroke="#5B6E9E" stroke-width="1.5"/>
+      <path d="M15.5 12 V26 M9 19 H22 M114.5 12 V26 M108 19 H121" stroke="#5B6E9E" stroke-width="1.2"/>
+      <circle cx="65" cy="6" r="8" fill="#FFF9EA" stroke="#8A5A42" stroke-width="1.5"/>
+      <path d="M65 1 V6 L69 8" fill="none" stroke="#5B6E9E" stroke-width="1.5" stroke-linecap="round"/>
+      <path d="M0 40 H32 M98 40 H130" stroke="#8DAFCB" stroke-width="3" stroke-linecap="round"/>
+      <rect x="7" y="47" width="116" height="23" rx="6" fill="#FFF2CD"/>
+      <text x="65" y="63" text-anchor="middle" font-family="Fredoka, sans-serif" font-size="14" fill="#344566">${settings.lang==='sv'?'Lilla stationen':'Little Station'}</text>
+    </g>`;
     // Empty coupling markers show how many carriages remain to be built.
     items.forEach((s,i)=>{ out += `<circle cx="${132+(i+1)*gap}" cy="110" r="5" fill="#FFF2CD" opacity=".7"/>`; });
     completed.forEach((s,i)=>{
