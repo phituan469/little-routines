@@ -501,6 +501,29 @@
   .skyline svg{width:100%;height:100%;display:block;overflow:visible}
   #flash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:17;transition:opacity .08s}
   #flash.on{opacity:.85}
+
+/* Train version shares the routine data and sliders with the animal version. */
+#train-scene{display:none;position:absolute;inset:70px 10px 32px;z-index:2}
+#train-scene svg{width:100%;height:100%;overflow:visible}
+body.train-version #train-scene{display:block}
+/* Fade scenery toward the scene background while keeping the train and controls crisp. */
+body.train-version #stage > .sun,
+body.train-version #stage > .cloud,
+body.train-version #stage > .mountains,
+body.train-version #stage > .birds,
+body.train-version #stage > .hill,
+body.train-version #stage > .skyline,
+body.train-version #stage > .starfield,
+body.train-version #stage > .moon{opacity:.3}
+
+body.train-version #wrap,body.train-version .friend-tag,body.train-version #town,body.train-version .zzz{display:none}
+body.train-version.asleep #stage{filter:none}
+.train-choice{min-height:44px;flex:1}
+.train-choice[aria-pressed="true"]{background:var(--sun);color:#22335A;border-color:var(--sun)}
+body.train-version #away,body.train-version #return,body.train-version #pick-label,body.train-version #animal-picker{display:none}
+#train-caption{position:absolute;bottom:9px;left:0;right:0;text-align:center;font-family:Fredoka,sans-serif;font-size:15px;color:var(--ink)}
+.train-flying-icon{position:fixed;width:48px;height:48px;z-index:30;pointer-events:none}
+@media(min-width:820px) and (orientation:landscape){#train-scene{inset:90px 12px 45px}}
 </style>
 </head>
 <body>
@@ -562,6 +585,8 @@
       </svg></div>
       <div class="animal" id="animal" role="button" tabindex="0" aria-label="Today's friend"></div>
     </div>
+    <div id="train-scene" role="img" aria-label="Routine train"></div>
+    <div id="train-caption" hidden></div>
     <div class="friend-tag"><span id="friend-label">Today's friend:</span> <b id="friend-name">Bunny</b></div>
   </section>
 
@@ -581,6 +606,11 @@
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <h2 id="sheet-title">Grown-ups</h2>
     <p id="sheet-p">Undo a step, start the morning over, or pick a different friend for today.</p>
+    <div class="sheet-label" id="version-label">Adventure</div>
+    <div class="row" role="group" aria-labelledby="version-label">
+      <button class="btn train-choice" data-version="animal" aria-pressed="true">🐰 <span>Animal</span></button>
+      <button class="btn train-choice" data-version="train" aria-pressed="false">🚂 <span>Train</span></button>
+    </div>
     <div class="row">
       <button class="btn" id="undo">↩︎ <span>Undo last step</span></button>
       <button class="btn warn" id="reset">🔄 <span>Reset today</span></button>
@@ -881,6 +911,7 @@
   let settings = Object.assign({lang:'en', sound:true}, load('mf_settings', {}));
   if (!T[settings.lang]) settings.lang = 'en';
   settings.sound = settings.sound !== false;
+  settings.version = settings.version === 'train' ? 'train' : 'animal';
   if (!settings.routines || !Array.isArray(settings.routines.morning) || !Array.isArray(settings.routines.night)) settings.routines = { morning: DEFAULT_ROUTINES.morning.slice(), night: DEFAULT_ROUTINES.night.slice() };
   buildRoutines(settings.routines);
   const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null, away: false});
@@ -1175,6 +1206,8 @@
   function renderText(){
     const s = t(), night = isNight();
     document.documentElement.lang = settings.lang;
+    $('#version-label').textContent = settings.lang === 'sv' ? 'Äventyr' : 'Adventure';
+    document.querySelectorAll('[data-version]').forEach(b=>{ b.setAttribute('aria-pressed', String(settings.version===b.dataset.version)); b.querySelector('span').textContent = b.dataset.version==='train' ? (settings.lang==='sv'?'Tåg':'Train') : (settings.lang==='sv'?'Djur':'Animal'); });
     $('#greet').textContent = isAdhoc() ? s.greetAdhoc : night ? s.greetNight : s.greet;
     $('#mode-adhoc').setAttribute('aria-pressed', String(isAdhoc())); $('#mode-adhoc').setAttribute('aria-label', s.modeAdhoc);
     $('#tiles-hint').textContent = s.tilesHint;
@@ -1242,6 +1275,7 @@
     $('#banner').hidden = isAdhoc() || doneCount < steps().length;
     renderTiles();
     renderText();
+    renderTrain();
   }
   function setMode(m){
     if (busy || !ROUTINES[m]) return;
@@ -1374,6 +1408,99 @@
     knob.addEventListener('keydown', e => { if ((e.key==='Enter' || e.key===' ') && !el.classList.contains('done') && !busy){ e.preventDefault(); max = track.clientWidth - knob.offsetWidth - 10; setPos(max); complete(i); } });
   }
 
+  /* ---------- Train adventure ---------- */
+  const trainPath = 'M70 225 H530 Q570 225 570 185 V150 Q570 110 530 110 H70 Q30 110 30 150 V185 Q30 225 70 225';
+  const trainColors = ['#FFB870','#8DC9EF','#BCA7E8','#8ED4AE','#F3A9BE','#FFE08A','#83D7D2','#B6C5EF'];
+  let trainMoving = false;
+  function renderTrain(){
+    const active = settings.version === 'train';
+    document.body.classList.toggle('train-version', active);
+    $('#train-caption').hidden = !active;
+    if (!active || trainMoving) return;
+    const items = steps(), completed = items.filter(s=>doneList().includes(s.id));
+    const gap = Math.min(62, 380 / Math.max(1,items.length));
+    const size = Math.min(1, gap/62);
+    const wheels = '<circle cx="-16" cy="-3" r="7" fill="#344566"/><circle cx="16" cy="-3" r="7" fill="#344566"/><circle cx="-16" cy="-3" r="3" fill="#D7E5EF"/><circle cx="16" cy="-3" r="3" fill="#D7E5EF"/>';
+    let out = `<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg"><path id="train-route" d="${trainPath}" fill="none" stroke="#A68C70" stroke-width="13" stroke-dasharray="4 9"/><path d="${trainPath}" fill="none" stroke="#667B91" stroke-width="5"/><path d="${trainPath}" fill="none" stroke="#D9E6EE" stroke-width="2"/>`;
+    out += '<g transform="translate(420 170)"><rect width="120" height="29" rx="7" fill="#FFF2CD"/><path d="M-8 0 L60 -24 128 0Z" fill="#E88470"/><text x="60" y="20" text-anchor="middle" font-family="Fredoka, sans-serif" font-size="17" fill="#344566">'+(settings.lang==='sv'?'Lilla stationen':'Little Station')+'</text></g>';
+    // Empty coupling markers show how many carriages remain to be built.
+    items.forEach((s,i)=>{ out += `<circle cx="${132+(i+1)*gap}" cy="110" r="5" fill="#FFF2CD" opacity=".7"/>`; });
+    completed.forEach((s,i)=>{
+      out += `<g class="train-vehicle" data-offset="${(i+1)*gap}" transform="translate(${132+(i+1)*gap} 110)"><g transform="scale(${size})"><path d="M-33 -14 H33" stroke="#596B80" stroke-width="4"/><rect x="-26" y="-52" width="52" height="44" rx="9" fill="${trainColors[i%8]}" stroke="#556787" stroke-width="2"/><svg x="-20" y="-52" width="40" height="40">${s.icon}</svg>${wheels}</g></g>`;
+    });
+    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})"><rect x="-29" y="-62" width="30" height="51" rx="6" fill="#63BFA8" stroke="#426D75" stroke-width="2"/><rect x="-24" y="-56" width="20" height="20" rx="4" fill="#E8F8FF"/><rect x="-3" y="-40" width="33" height="29" rx="8" fill="#F1A44F"/><path d="M-34 -63 H6 M17 -42 V-59 H29 V-42" fill="#637994" stroke="#426078" stroke-width="5" stroke-linejoin="round"/><path d="M29 -17 L39 -8 H25" fill="#E88470"/>${wheels}<circle cx="29" cy="-28" r="4" fill="#FFF2CD"/></g></g></svg>`;
+    $('#train-scene').innerHTML = out;
+    $('#train-scene').setAttribute('aria-label', (settings.lang==='sv'?'Tåg':'Train')+`: ${completed.length} / ${items.length}`);
+    $('#train-caption').textContent = settings.lang==='sv' ? `${completed.length} av ${items.length} vagnar klara` : `${completed.length} of ${items.length} carriages ready`;
+  }
+  function trainStep(i, cb){
+    const source = document.querySelectorAll('.step .knob')[i];
+    const cars = $('#train-scene').querySelectorAll('.train-vehicle');
+    const completed = steps().filter(s=>doneList().includes(s.id));
+    const carriageIndex = completed.findIndex(s=>s.id===steps()[i].id);
+    const target = cars[carriageIndex];
+    const a = source.getBoundingClientRect(), b = target.getBoundingClientRect();
+    const icon = document.createElement('div'); icon.className='train-flying-icon'; icon.innerHTML=steps()[i].icon;
+    icon.style.left=a.left+'px'; icon.style.top=a.top+'px'; document.body.appendChild(icon);
+    icon.animate([{transform:'translate(0,0) scale(1)'},{transform:`translate(${b.left+b.width/2-a.left-24}px,${b.top-a.top}px) scale(.8)`}],{duration:850,easing:'cubic-bezier(.25,.65,.3,1)',fill:'forwards'});
+    target.animate([{opacity:0,transform:'translateX(-30px)'},{opacity:1,transform:'translateX(0)'}],{duration:550,delay:650,composite:'add'});
+    tone(440,.15,{vol:.1}); tone(660,.18,{vol:.1,when:.7});
+    setTimeout(()=>{
+      icon.remove(); SFX.click();
+      // Bounce the carriage artwork so the icon and wheels hop together,
+      // without disturbing its position on the track.
+      target.firstElementChild.animate([
+        {translate:'0 0',offset:0},
+        {translate:'0 -30px',offset:.2},
+        {translate:'0 0',offset:.43},
+        {translate:'0 -22px',offset:.66},
+        {translate:'0 0',offset:1}
+      ],{duration:1650,easing:'ease-in-out'});
+      tone(660,.12,{vol:.08}); tone(784,.12,{vol:.08,when:.825});
+      setTimeout(()=>{
+        const carriage = target.firstElementChild;
+        carriage.style.transformOrigin = '0px 0px';
+        carriage.animate([
+          {scale:'1',rotate:'0deg',offset:0},
+          {scale:'1.55',rotate:'-6deg',offset:.3},
+          {scale:'1.6',rotate:'6deg',offset:.45},
+          {scale:'1.55',rotate:'-6deg',offset:.6},
+          {scale:'1.6',rotate:'6deg',offset:.75},
+          {scale:'1',rotate:'0deg',offset:1}
+        ],{duration:2500,easing:'ease-in-out'});
+        tone(440,.35,{vol:.08,to:660});
+        setTimeout(cb,2550);
+      },1700);
+    },1250);
+  }
+  function trainLap(cb){
+    trainMoving=true;
+    const path=$('#train-route'), length=path.getTotalLength(), vehicles=[...$('#train-scene').querySelectorAll('.train-vehicle')];
+    // Start at the upper-left station, facing left, with carriages trailing to the right.
+    let start=0, nearest=Infinity;
+    for(let d=0;d<length;d+=.25){ const p=path.getPointAtLength(d), error=(p.x-132)**2+(p.y-110)**2; if(error<nearest){ nearest=error; start=d; } }
+    const t0=performance.now();
+    tone(880,.45,{type:'sine',vol:.12,to:1046}); tone(1046,.5,{type:'sine',vol:.12,when:.5});
+    function frame(now){
+      const u=Math.min(1,(now-t0)/4800), distance=start+length*(u*u*(3-2*u));
+      vehicles.forEach(v=>{
+        const d=((distance-Number(v.dataset.offset))%length+length)%length;
+        const p=path.getPointAtLength(d), q=path.getPointAtLength((d+.5)%length);
+        // At rest the train faces left above the upper rail. Rotate that pose
+        // with the track tangent so its wheels follow the rail through every turn.
+        const angle=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI-180;
+        v.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${angle})`);
+      });
+      if(u<1) requestAnimationFrame(frame); else { trainMoving=false; renderTrain(); cb(); }
+    }
+    requestAnimationFrame(frame);
+  }
+  document.querySelectorAll('[data-version]').forEach(b=>b.addEventListener('click',()=>{
+    if(busy) return;
+    settings.version=b.dataset.version; save('mf_settings',settings); $('#finale').hidden=true;
+    renderProgress(); SFX.click();
+  }));
+
   /* ---------- Actions ---------- */
   function playAnim(name, cb, sfx){
     wrap.className = 'animal-wrap'; void wrap.offsetWidth;
@@ -1389,7 +1516,14 @@
       const remaining = steps().filter(x => !doneList().includes(x.id));
       if (!remaining.length) (isNight() ? nightFinale : finale)();
     };
-    if (isAdhoc()){ day.adhocDoneAt[s.id] = Date.now(); save('mf_day', day); renderTiles(); if (isAway()) fireworksOnly(()=>{ busy = false; }); else launchStep(()=>{ busy = false; }); }
+    if (settings.version === 'train'){
+      if(isAdhoc()){ day.adhocDoneAt[s.id]=Date.now(); save('mf_day',day); }
+      trainStep(i,()=>{
+        if(steps().length && steps().every(x=>doneList().includes(x.id))){ trainLap(()=>{ busy=false; if(!isAdhoc()){ $('#finale').hidden=false; SFX.fanfare(); confetti(); } }); }
+        else busy=false;
+      });
+    }
+    else if (isAdhoc()){ day.adhocDoneAt[s.id] = Date.now(); save('mf_day', day); renderTiles(); if (isAway()) fireworksOnly(()=>{ busy = false; }); else launchStep(()=>{ busy = false; }); }
     else if (isNight()) heroStep(i, after);
     else if (isAway()){ SFX.click(); [N.C5,N.E5].forEach((f,k)=>tone(f,.25,{when:k*.12,vol:.14})); setTimeout(after, 900); }
     else playAnim(s.anim, after, s.sfx);
@@ -1457,7 +1591,7 @@
   animalEl.addEventListener('click', ()=>{ if (busy || isAway() || (isNight() && isAsleep())) return; playAnim('hello'); });
   animalEl.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); animalEl.click(); } });
 
-  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', ()=>{ settings.lang = b.dataset.lang; save('mf_settings', settings); SFX.click(); renderAnimal(); renderText(); }));
+  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', ()=>{ settings.lang = b.dataset.lang; save('mf_settings', settings); SFX.click(); renderAnimal(); renderText(); renderTrain(); }));
   let soundHold = null, soundHeld = false;
   $('#sound').addEventListener('pointerdown', ()=>{ soundHeld = false; clearTimeout(soundHold); soundHold = setTimeout(()=>{ soundHeld = true; toast(`audio: ${settings.sound ? 'on' : 'muted'} · engine: ${ctx ? ctx.state : 'not started'} · unlocked: ${unlocked}`); }, 900); });
   ['pointerup','pointercancel','pointerleave'].forEach(ev => $('#sound').addEventListener(ev, ()=>clearTimeout(soundHold)));
