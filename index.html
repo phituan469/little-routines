@@ -255,10 +255,6 @@
     border:2.5px solid #22335A;will-change:transform;cursor:grab;touch-action:none;
   }
   .knob svg{width:38px;height:38px;display:block}
-  .ico-emoji{display:block;line-height:1;font-size:32px}
-  .tile .ico-emoji{font-size:min(8vw,38px)}
-  .ed-item .ico-emoji{font-size:24px;flex:none}
-  .ed-add .ico-emoji{font-size:24px}
   .knob:active{cursor:grabbing}
   .step.done .knob{background:var(--done);border-color:var(--grass-dark)}
   .step.done .track{pointer-events:none}
@@ -732,6 +728,26 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     dressed:{icon:ICON.dressed,en:'Get dressed', sv:'Klä på sig'},
   };
   const TASK_ORDER = ['pee','teeth','water','food','poop','shower','hands','dressed'];
+  const CARS = [
+    {id:'hatchback',en:'Hatchback',sv:'Halvkombi',color:'#22BD70',length:100,width:54,cabin:52},
+    {id:'sedan',en:'Sedan',sv:'Sedan',color:'#248AF2',length:140,width:52,cabin:48},
+    {id:'coupe',en:'Coupe',sv:'Kupé',color:'#9252EC',length:130,width:48,cabin:40},
+    {id:'suv',en:'SUV',sv:'SUV',color:'#FF9828',length:138,width:68,cabin:70},
+    {id:'pickup',en:'Pickup',sv:'Pickup',color:'#F05243',length:144,width:58,cabin:42},
+    {id:'van',en:'Van',sv:'Skåpbil',color:'#12BDC8',length:144,width:68,cabin:88},
+    {id:'convertible',en:'Convertible',sv:'Cabriolet',color:'#F247A0',length:124,width:54,cabin:48},
+    {id:'race',en:'Race car',sv:'Racerbil',color:'#FFD326',length:138,width:56,cabin:42}
+  ];
+  const TRAINS = [
+    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#EE4F43',accent:'#FFCF28'},
+    {id:'passenger',en:'Passenger',sv:'Persontåg',color:'#258FF2',accent:'#FFF1C4'},
+    {id:'goods',en:'Goods',sv:'Godståg',color:'#FF962B',accent:'#43B76B'},
+    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#F5F8FA',accent:'#216EE8'},
+    {id:'metro',en:'Metro',sv:'Tunnelbana',color:'#9950E8',accent:'#5AE2DF'},
+    {id:'tram',en:'Tram',sv:'Spårvagn',color:'#20BB70',accent:'#FFD73D'},
+    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#10BAC9',accent:'#FA733B'},
+    {id:'toy',en:'Toy train',sv:'Leksakståg',color:'#F43F9C',accent:'#FFD128'}
+  ];
   const DEFAULT_ROUTINES = { morning:['pee','teeth','water','food','water','poop'], night:['food','water','pee','teeth'] };
   const ROUTINE_MAX = { morning:8, night:6 };
   // Morning animations are handed out by position so a routine of any length stays varied
@@ -743,18 +759,24 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     adhoc:   { key:'adhocDone', steps: TASK_ORDER.map(k => Object.assign({id:'a-'+k, task:k}, TASKS[k])) },
   };
   // Build the morning and night step lists from the saved routine config (settings.routines)
-  function buildRoutines(cfg){
+  const own = (object,key) => Object.prototype.hasOwnProperty.call(object,key);
+  const newStepId = (routine,task) => `${routine}-${task}@${globalThis.crypto?.randomUUID?.() || Date.now().toString(36)+Math.random().toString(36).slice(2)}`;
+  function buildRoutines(cfg,ids){
     ['morning','night'].forEach(r => {
-      const seen = {};
-      let list = (Array.isArray(cfg[r]) ? cfg[r] : []).filter(k => TASKS[k]).slice(0, ROUTINE_MAX[r]);
-      if (!list.length) list = DEFAULT_ROUTINES[r].slice();
-      cfg[r] = list;
-      ROUTINES[r].steps = list.map((k,i) => {
-        seen[k] = (seen[k] || 0) + 1;
-        const st = Object.assign({id:`${r}-${k}#${seen[k]}`, task:k}, TASKS[k]);
-        if (r === 'morning'){ st.anim = MORNING_ANIMS[i % MORNING_ANIMS.length]; if (st.anim === 'rollback') st.sfx = 'roll'; }
+      const seen = {}, used = new Set();
+      let list = (Array.isArray(cfg[r]) ? cfg[r] : []).map((task,i)=>({task,id:ids[r]?.[i]})).filter(x=>typeof x.task==='string' && own(TASKS,x.task)).slice(0,ROUTINE_MAX[r]);
+      if(!list.length) list=DEFAULT_ROUTINES[r].map(task=>({task}));
+      ROUTINES[r].steps=list.map(({task:k,id},i)=>{
+        seen[k]=(seen[k]||0)+1;
+        const legacy=`${r}-${k}#${seen[k]}`;
+        if(typeof id!=='string' || !id.startsWith(`${r}-${k}`) || used.has(id)) id=used.has(legacy)?newStepId(r,k):legacy;
+        used.add(id);
+        const st=Object.assign({id,task:k},TASKS[k]);
+        if(r==='morning'){st.anim=MORNING_ANIMS[i%MORNING_ANIMS.length];if(st.anim==='rollback')st.sfx='roll';}
         return st;
       });
+      cfg[r]=ROUTINES[r].steps.map(st=>st.task);
+      ids[r]=ROUTINES[r].steps.map(st=>st.id);
     });
   }
   const ADHOC_MAX = 3;            // armed tasks at a time
@@ -941,30 +963,63 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   const load = (k, fb) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch(e){ return fb; } };
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} };
 
-  let settings = Object.assign({lang:'en', sound:true}, load('mf_settings', {}));
-  if (!T[settings.lang]) settings.lang = 'en';
-  settings.sound = settings.sound !== false;
-  settings.version = ['train','car'].includes(settings.version) ? settings.version : settings.version === 'aquarium' ? 'train' : 'animal';
-  // Vehicle choices now live in daily state, like the animal override.
-  delete settings.carType;
-  if (!settings.routines || !Array.isArray(settings.routines.morning) || !Array.isArray(settings.routines.night)) settings.routines = { morning: DEFAULT_ROUTINES.morning.slice(), night: DEFAULT_ROUTINES.night.slice() };
-  buildRoutines(settings.routines);
-  const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null, carType: null, trainType: null, away: false});
-  let day = load('mf_day', null);
-  if (!day || day.date !== todayKey()) day = freshDay();
-  if (!Array.isArray(day.nightDone)) day.nightDone = [];
-  if (!Array.isArray(day.adhocDone)) day.adhocDone = [];
-  if (!day.adhocDoneAt) day.adhocDoneAt = {};
-  if (!Array.isArray(day.adhocArmed)) day.adhocArmed = [];
-  // Drop progress for steps that no longer exist (routine edited, or ids from an older version)
-  function pruneDone(){
-    day.done = day.done.filter(id => ROUTINES.morning.steps.some(s => s.id === id));
-    day.nightDone = day.nightDone.filter(id => ROUTINES.night.steps.some(s => s.id === id));
+  const record = v => v && typeof v==='object' && !Array.isArray(v);
+  const unique = v => [...new Set(Array.isArray(v)?v.filter(x=>typeof x==='string'):[])];
+  function normalizeSettings(raw){
+    raw=record(raw)?raw:{};
+    return {
+      lang:typeof raw.lang==='string' && own(T,raw.lang)?raw.lang:'en',sound:raw.sound!==false,
+      version:['train','car'].includes(raw.version)?raw.version:raw.version==='aquarium'?'train':'animal',
+      routines:record(raw.routines)?Object.assign({},raw.routines):{},
+      routineIds:record(raw.routineIds)?Object.assign({},raw.routineIds):{}
+    };
   }
-  pruneDone();
-
+  let settings=normalizeSettings(load('mf_settings',{}));
+  buildRoutines(settings.routines,settings.routineIds);
+  const freshDay=()=>({date:todayKey(),done:[],nightDone:[],adhocDone:[],adhocDoneAt:{},adhocArmed:[],animal:null,carType:null,trainType:null,away:false});
+  function normalizeDay(raw){
+    const day=freshDay();
+    if(!record(raw)||raw.date!==day.date)return day;
+    day.done=unique(raw.done).filter(id=>ROUTINES.morning.steps.some(s=>s.id===id));
+    day.nightDone=unique(raw.nightDone).filter(id=>ROUTINES.night.steps.some(s=>s.id===id));
+    day.adhocArmed=unique(raw.adhocArmed).filter(id=>ROUTINES.adhoc.steps.some(s=>s.id===id)).slice(0,ADHOC_MAX);
+    day.adhocDone=unique(raw.adhocDone).filter(id=>day.adhocArmed.includes(id));
+    for(const id of day.adhocDone){const at=raw.adhocDoneAt?.[id];day.adhocDoneAt[id]=typeof at==='number'&&Number.isFinite(at)&&at>0?Math.min(at,Date.now()):0;}
+    day.animal=Number.isInteger(raw.animal)&&raw.animal>=0&&raw.animal<ANIMALS.length?raw.animal:null;
+    day.carType=CARS.some(c=>c.id===raw.carType)?raw.carType:null;
+    day.trainType=TRAINS.some(t=>t.id===raw.trainType)?raw.trainType:null;
+    day.away=raw.away===true;
+    return day;
+  }
+  let day=normalizeDay(load('mf_day',null));
+  // Read the newest state under a cross-tab lock before every mutation. Stable
+  // occurrence IDs let editor operations target the intended item after a refresh.
+  const stateLock='little-routines-state:'+new URL('./',location.href).pathname;
+  function syncState(){
+    const before=JSON.stringify([settings,day]);
+    settings=normalizeSettings(load('mf_settings',settings));
+    buildRoutines(settings.routines,settings.routineIds);
+    day=normalizeDay(load('mf_day',day));
+    const changed=before!==JSON.stringify([settings,day]);
+    if(changed){applySoundSetting();}
+    if(changed&&!busy){buildTown();renderAnimal();buildSteps();renderProgress();renderTown();}
+  }
+  function mutate(fn,{whileBusy=false}={}){
+    const run=()=>{
+      if(busy&&!whileBusy)return;
+      syncState();
+      return fn();
+    };
+    return navigator.locks?.request ? navigator.locks.request(stateLock,run) : Promise.resolve().then(run);
+  }
+  function refreshFromStorage(){
+    if(busy)return;
+    syncState();
+    if(load('mf_day',day)?.date!==day.date)mutate(()=>save('mf_day',day));
+  }
+  window.addEventListener('storage',e=>{if(e.key==='mf_day'||e.key==='mf_settings'||e.key===null)refreshFromStorage();});
+  function releaseBusy(){busy=false;refreshFromStorage();renderProgress();renderTown();}
   const dayIndex = () => Math.floor((Date.now() - new Date().getTimezoneOffset()*60000) / 86400000);
-  if (!(Number.isInteger(day.animal) && day.animal >= 0 && day.animal < ANIMALS.length)) day.animal = null;
   const animalIdx = () => day.animal != null ? day.animal : dayIndex() % ANIMALS.length;
   const t = () => T[settings.lang];
   const animalName = a => a[settings.lang];
@@ -991,7 +1046,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
         ctx = new (window.AudioContext || window.webkitAudioContext)();
         const comp = ctx.createDynamicsCompressor();
         comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 8; comp.attack.value = 0.003; comp.release.value = 0.2;
-        master = ctx.createGain(); master.gain.value = 1.0;
+        master = ctx.createGain(); master.gain.value = settings.sound?1:0;
         master.connect(comp).connect(ctx.destination);
       }
       if (ctx.state === 'suspended') ctx.resume();
@@ -1023,7 +1078,12 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
   // touchend/click/keydown are the gestures iOS trusts for starting audio (touchstart is not one of them)
   ['touchend','click','keydown'].forEach(ev => document.addEventListener(ev, unlockAudio, {capture:true, passive:true}));
-  document.addEventListener('visibilitychange', ()=>{ if (!document.hidden && ctx && ctx.state !== 'running' && settings.sound) ctx.resume().catch(()=>{}); });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden)refreshFromStorage(); if (!document.hidden && ctx && ctx.state !== 'running' && settings.sound) ctx.resume().catch(()=>{}); });
+  function applySoundSetting(){
+    if(master&&ctx){master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(settings.sound?1:0,ctx.currentTime,.01);}
+    $('#sound').textContent=settings.sound?'🔊':'🔇';
+    $('#sound').setAttribute('aria-pressed',String(settings.sound));
+  }
   function tone(freq, dur, opts={}){
     const c = ac(); if (!c) return;
     const {type='sine', vol=0.18, when=0, to=null} = opts;
@@ -1274,6 +1334,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       $('#banner').textContent=settings.lang==='sv'?'Bilen är klar — bra jobbat! 🚗':'Car complete — great work! 🚗';
     }
     $('#holdhint').textContent = s.hold;
+    $('#sound').setAttribute('aria-pressed',String(settings.sound));
     $('#sound').setAttribute('aria-label', settings.sound ? s.soundOn : s.soundOff);
     $('#lang-en').setAttribute('aria-pressed', String(settings.lang==='en'));
     $('#lang-sv').setAttribute('aria-pressed', String(settings.lang==='sv'));
@@ -1282,6 +1343,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     document.querySelectorAll('.step').forEach((el,i)=>{
       el.querySelector('.step-name button').textContent = stepName(steps()[i]);
       const done = doneList().includes(steps()[i].id);
+      const knob=el.querySelector('.knob');
+      knob.setAttribute('aria-label',stepName(steps()[i])+' — '+(done?s.done:s.slide));
+      knob.setAttribute('aria-pressed',String(done));
+      knob.setAttribute('aria-disabled',String(done||busy));
       el.querySelector('.hint').textContent = done ? s.done : s.slide;
       el.querySelector('.step-do').textContent = done ? '✓' : '';
     });
@@ -1297,7 +1362,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
           <div class="step-name"><button type="button"></button></div>
           <div class="step-do"></div>
         </div>
-        <div class="track"><div class="fill"></div><div class="hint"></div><div class="knob" role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">${s.icon}</div></div>`;
+        <div class="track"><div class="fill"></div><div class="hint"></div><div class="knob" role="button" aria-pressed="false" tabindex="0">${s.icon}</div></div>`;
       host.appendChild(el);
       attachSlider(el, i);
     });
@@ -1312,14 +1377,14 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       el.classList.toggle('done', done);
       const knob = el.querySelector('.knob'), fill = el.querySelector('.fill');
       knob.innerHTML = steps()[i].icon;   // the icon stays visible when done so a child can see which task it was
-      if (done){ const max = el.querySelector('.track').clientWidth - knob.offsetWidth - 10; knob.style.transform = `translateX(${Math.max(max,0)}px)`; fill.style.width='100%'; knob.setAttribute('aria-valuenow','100'); }
-      else { knob.style.transform='translateX(0)'; fill.style.width='0'; knob.setAttribute('aria-valuenow','0'); }
+      if (done){ const max = el.querySelector('.track').clientWidth - knob.offsetWidth - 10; knob.style.transform = `translateX(${Math.max(max,0)}px)`; fill.style.width='100%'; knob.dataset.progress='100'; }
+      else { knob.style.transform='translateX(0)'; fill.style.width='0'; knob.dataset.progress='0'; }
       const isNext = !done && !nextSet; el.classList.toggle('next', isNext); if (isNext) nextSet = true;
     });
     $('#banner').hidden = isAdhoc() || doneCount < steps().length;
     renderTiles();
     renderText();
-    renderTrain();
+    renderScenes();
   }
   function setMode(m){
     if (busy || !ROUTINES[m]) return;
@@ -1362,7 +1427,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       host.appendChild(b);
     });
   }
-  function toggleArm(id, tile){
+  function toggleArm(id,tile){return mutate(()=>toggleArmNow(id,tile));}
+  function toggleArmNow(id, tile){
     const armed = day.adhocArmed.includes(id);
     if (armed){
       day.adhocArmed = day.adhocArmed.filter(x => x !== id);
@@ -1382,6 +1448,9 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   // A finished any-time task clears itself (and disarms) after ADHOC_DONE_MS
   function expireAdhoc(){
     if (busy) return;
+    return mutate(expireAdhocNow);
+  }
+  function expireAdhocNow(){
     const now = Date.now(); let changed = false;
     day.adhocDone.slice().forEach(id => {
       if (now - (day.adhocDoneAt[id] || 0) >= ADHOC_DONE_MS){
@@ -1403,23 +1472,31 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       list.forEach((k,i) => {
         const li = document.createElement('div'); li.className = 'ed-item';
         li.innerHTML = `${TASKS[k].icon}<span class="nm">${i+1}. ${TASKS[k][settings.lang]}</span><button type="button" class="up" aria-label="Move up" ${i===0?'disabled':''}>▲</button><button type="button" class="dn" aria-label="Move down" ${i===list.length-1?'disabled':''}>▼</button><button type="button" class="rm" aria-label="Remove">✕</button>`;
-        li.querySelector('.up').addEventListener('click', ()=>{ [list[i-1], list[i]] = [list[i], list[i-1]]; applyRoutines(); });
-        li.querySelector('.dn').addEventListener('click', ()=>{ [list[i+1], list[i]] = [list[i], list[i+1]]; applyRoutines(); });
-        li.querySelector('.rm').addEventListener('click', ()=>{ if (list.length <= 1){ toast(s.minTask); return; } list.splice(i,1); applyRoutines(); });
+        const id=settings.routineIds[r][i];
+        li.querySelector('.up').addEventListener('click',()=>editRoutine(r,id,-1));
+        li.querySelector('.dn').addEventListener('click',()=>editRoutine(r,id,1));
+        li.querySelector('.rm').addEventListener('click',()=>editRoutine(r,id,0));
         ul.appendChild(li);
       });
       const add = box.querySelector('.ed-add');
       TASK_ORDER.forEach(k => {
         const b = document.createElement('button'); b.type = 'button'; b.setAttribute('aria-label', TASKS[k][settings.lang]); b.innerHTML = TASKS[k].icon;
         b.disabled = list.length >= max;
-        b.addEventListener('click', ()=>{ if (list.length >= max){ toast(`${s.maxTasks} ${max}`); return; } list.push(k); applyRoutines(); });
+        b.addEventListener('click',()=>mutate(()=>{const list=settings.routines[r];if(list.length>=max){toast(`${t().maxTasks} ${max}`);return;}list.push(k);settings.routineIds[r].push(newStepId(r,k));applyRoutines();}));
         add.appendChild(b);
       });
       host.appendChild(box);
     });
   }
+  function editRoutine(r,id,delta){return mutate(()=>{
+    const list=settings.routines[r],ids=settings.routineIds[r],i=ids.indexOf(id);
+    if(i<0)return;
+    if(delta===0){if(list.length<=1){toast(t().minTask);return;}list.splice(i,1);ids.splice(i,1);}
+    else{const j=i+delta;if(j<0||j>=list.length)return;[list[i],list[j]]=[list[j],list[i]];[ids[i],ids[j]]=[ids[j],ids[i]];}
+    applyRoutines();
+  });}
   function applyRoutines(){
-    save('mf_settings', settings); buildRoutines(settings.routines); pruneDone(); save('mf_day', day);
+    save('mf_settings', settings); buildRoutines(settings.routines,settings.routineIds); day=normalizeDay(day); save('mf_day', day);
     buildTown(); if (!isAdhoc()) buildSteps(); renderProgress(); renderTown(); SFX.click();
   }
 
@@ -1430,7 +1507,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   function attachSlider(el, i){
     const track = el.querySelector('.track'), knob = el.querySelector('.knob'), fill = el.querySelector('.fill');
     let startX = 0, dx = 0, max = 0, active = false;
-    const setPos = x => { knob.style.transform = `translateX(${x}px)`; fill.style.width = (x + knob.offsetWidth/2 + 5) + 'px'; knob.setAttribute('aria-valuenow', String(Math.round(x/max*100))); };
+    const setPos = x => { knob.style.transform = `translateX(${x}px)`; fill.style.width = (x + knob.offsetWidth/2 + 5) + 'px'; knob.dataset.progress=String(max>0?Math.round(x/max*100):0); };
     knob.addEventListener('pointerdown', e => {
       if (el.classList.contains('done') || busy) return;
       active = true; startX = e.clientX; dx = 0;
@@ -1453,18 +1530,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
 
   /* ---------- Build-a-car adventure ---------- */
-  const CARS = [
-    {id:'hatchback',en:'Hatchback',sv:'Halvkombi',color:'#69BDA8',length:110,width:52,cabin:48},
-    {id:'sedan',en:'Sedan',sv:'Sedan',color:'#79AFD7',length:132,width:52,cabin:48},
-    {id:'coupe',en:'Coupe',sv:'Kupé',color:'#BEA4DC',length:124,width:50,cabin:40},
-    {id:'suv',en:'SUV',sv:'SUV',color:'#D5AB65',length:132,width:64,cabin:66},
-    {id:'pickup',en:'Pickup',sv:'Pickup',color:'#E99C80',length:144,width:58,cabin:42},
-    {id:'van',en:'Van',sv:'Skåpbil',color:'#80BEC9',length:140,width:64,cabin:78},
-    {id:'convertible',en:'Convertible',sv:'Cabriolet',color:'#E8A4BE',length:124,width:54,cabin:48},
-    {id:'race',en:'Race car',sv:'Racerbil',color:'#E5B84F',length:138,width:56,cabin:42}
-  ];
   const carCourse = 'M110 215 C70 215 42 190 60 155 L105 75 Q125 45 155 75 L215 165 Q235 195 255 165 L315 75 Q335 45 355 75 L415 165 Q435 195 455 165 L500 100 Q530 65 550 105 Q580 190 515 225 C420 275 185 270 110 215 Z';
-  if (!CARS.some(c=>c.id===day.carType)) day.carType = null;
   const selectedCar = () => CARS.find(c=>c.id===day.carType) || CARS[dayIndex() % CARS.length];
   let carMoving=false;
   // Eight visual parts are grouped into as many build stages as the routine has tasks.
@@ -1483,7 +1549,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       `<rect x="${front-8}" y="${-w/2+7}" width="6" height="12" rx="3" fill="#FFF2B9"/><rect x="${front-8}" y="${w/2-19}" width="6" height="12" rx="3" fill="#FFF2B9"/><rect x="${rear+2}" y="${-w/2+7}" width="4" height="10" rx="2" fill="#B96564"/><rect x="${rear+2}" y="${w/2-17}" width="4" height="10" rx="2" fill="#B96564"/><path d="M${front-2} -6 V6" stroke="#527083" stroke-width="3"/>`,
       c.id==='pickup'?`<rect x="${rear+8}" y="${-w/2+7}" width="48" height="${w-14}" rx="4" fill="#B27560"/><path d="M${rear+15} -15 h34 M${rear+15} -5 h34 M${rear+15} 5 h34 M${rear+15} 15 h34" stroke="#DCA98F" stroke-width="2"/>`:
       c.id==='race'?`<path d="M${rear+9} -34 V34" stroke="#344566" stroke-width="7"/><path d="M10 -8 H${front-12} M10 8 H${front-12}" stroke="#FFF8DE" stroke-width="5"/><circle cx="-5" r="12" fill="#FFF8DE"/><text x="-5" y="5" font-size="15" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
-      c.id==='suv'?`<path d="M-22 -19 H22 M-22 19 H22" stroke="#496379" stroke-width="4"/><circle cx="${rear+3}" r="13" fill="#344566"/><circle cx="${rear+3}" r="7" fill="#8EA6B5"/>`:
+      c.id==='suv'?`<path d="M-22 -19 H22 M-22 19 H22" stroke="#354C60" stroke-width="6"/><circle cx="${rear+3}" r="13" fill="#344566"/><circle cx="${rear+3}" r="7" fill="#8EA6B5"/>`:
       c.id==='van'?`<path d="M-37 -17 H4 M-37 17 H4 M-16 -17 V17" stroke="#5796A1" stroke-width="3"/>`:
       `<path d="M${front-24} -10 H${front-17} M${front-24} 10 H${front-17} M-4 ${w/2-4} h8 M-4 ${-w/2+4} h8" stroke="#4E6C82" stroke-width="2.5" stroke-linecap="round"/>`
     ];
@@ -1491,10 +1557,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   // Side silhouettes for the workshop and picker; overhead art is reserved for the driving course.
   function carParts(c){
     const front=c.length/2,rear=-front,axle=c.length*.3;
-    const tall=c.id==='suv'||c.id==='van',roof=tall?-43:c.id==='coupe'||c.id==='race'?-29:-36;
-    const cabRear=c.id==='pickup'?-8:c.id==='van'?rear+5:c.id==='suv'?rear+12:rear+24;
-    const cabFront=c.id==='pickup'?36:front-21;
-    const wheel=x=>`<circle cx="${x}" cy="21" r="14" fill="#344566"/><circle cx="${x}" cy="21" r="8" fill="#D5E4ED"/><circle cx="${x}" cy="21" r="3" fill="#859EAF"/><path d="M${x-5} 16 L${x+5} 26 M${x+5} 16 L${x-5} 26" stroke="#92A9B9" stroke-width="1.5"/>`;
+    const tall=c.id==='suv'||c.id==='van',roof=tall?-48:c.id==='hatchback'?-41:c.id==='coupe'||c.id==='race'?-25:-34;
+    const cabRear=c.id==='pickup'?-5:c.id==='van'?rear+2:c.id==='suv'?rear+9:c.id==='hatchback'?rear+8:c.id==='coupe'?rear+17:rear+31;
+    const cabFront=c.id==='pickup'?39:c.id==='sedan'?front-32:c.id==='race'?front-31:front-21;
+    const wheel=x=>`<circle cx="${x}" cy="21" r="${c.id==='suv'?16:14}" fill="#344566"/><circle cx="${x}" cy="21" r="8" fill="#D5E4ED"/><circle cx="${x}" cy="21" r="3" fill="#859EAF"/><path d="M${x-5} 16 L${x+5} 26 M${x+5} 16 L${x-5} 26" stroke="#92A9B9" stroke-width="1.5"/>`;
     const body=`M${rear+5} -10 H${front-16} Q${front} -8 ${front} 1 V13 Q${front} 18 ${front-5} 18 H${axle+16} Q${axle+16} 3 ${axle} 3 Q${axle-16} 3 ${axle-16} 18 H${-axle+16} Q${-axle+16} 3 ${-axle} 3 Q${-axle-16} 3 ${-axle-16} 18 H${rear+4} Q${rear} 18 ${rear} 11 V-3 Q${rear} -10 ${rear+5} -10Z`;
     let cabin,windows,details;
     if(c.id==='convertible'){
@@ -1502,13 +1568,16 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       windows='<path d="M25 -28 L34 -11 H23Z" fill="#C6EAF3"/><path d="M-40 -11 H15" stroke="#F7D7B5" stroke-width="3"/>';
       details='<path d="M-8 -3 H2 M-35 4 H16" stroke="#B97B98" stroke-width="2" stroke-linecap="round"/>';
     }else{
-      cabin=`<path d="M${cabRear-9} -9 L${cabRear+5} ${roof+7} Q${cabRear+10} ${roof} ${cabRear+19} ${roof} H${cabFront-17} Q${cabFront-10} ${roof} ${cabFront-6} ${roof+8} L${cabFront+9} -9Z" fill="${c.color}" stroke="#5C7685" stroke-width="2"/>`;
+      const boxy=['van','suv','hatchback'].includes(c.id);
+      const cabinShape=boxy ? `M${cabRear-3} -9 V${roof+7} Q${cabRear-3} ${roof} ${cabRear+5} ${roof} H${cabFront-15} Q${cabFront-7} ${roof} ${cabFront-4} ${roof+9} L${cabFront+10} -9Z` : `M${cabRear-11} -9 L${cabRear+4} ${roof+7} Q${cabRear+10} ${roof} ${cabRear+19} ${roof} H${cabFront-17} Q${cabFront-10} ${roof} ${cabFront-6} ${roof+8} L${cabFront+9} -9Z`;
+      cabin=`<path d="${cabinShape}" fill="${c.color}" stroke="#49697B" stroke-width="2"/>`;
+      if(c.id==='sedan') cabin+=`<path d="M${cabRear+11} ${roof+1} H${cabFront-17}" stroke="#F2F7FF" stroke-width="4" stroke-linecap="round"/>`;
       const left=cabRear+7,right=cabFront-1,mid=(left+right)/2;
       windows=`<path d="M${left-5} -13 L${left+6} ${roof+7} H${mid-3} V-13Z M${mid+2} ${roof+7} H${right-9} L${right+4} -13 H${mid+2}Z" fill="#C6EAF3" stroke="#6E96AD" stroke-width="1.5"/><path d="M${cabFront+5} -10 h9" stroke="#5C7685" stroke-width="3" stroke-linecap="round"/>`;
-      details=c.id==='pickup'?`<path d="M${rear+9} -12 H-15 V5 H${rear+9}" fill="#CB8268" stroke="#B57762" stroke-width="2"/><path d="M${rear+15} -5 H-22" stroke="#F4C6AD" stroke-width="2"/>`:
-        c.id==='suv'?`<path d="M${cabRear+1} ${roof-3} H${cabFront-8}" stroke="#496379" stroke-width="4" stroke-linecap="round"/><path d="M-14 -3 h7 M18 -3 h7" stroke="#687C67" stroke-width="2.5" stroke-linecap="round"/><rect x="${rear-5}" y="-9" width="7" height="22" rx="3" fill="#344566"/>`:
+      details=c.id==='pickup'?`<path d="M${rear+5} -19 H-16 V5 H${rear+5}" fill="#C8312A" stroke="#B57762" stroke-width="2"/><path d="M${rear+10} -12 H-22" stroke="#F4C6AD" stroke-width="2"/>`:
+        c.id==='suv'?`<path d="M${cabRear+1} ${roof-3} H${cabFront-8}" stroke="#354C60" stroke-width="6" stroke-linecap="round"/><path d="M-14 -3 h7 M18 -3 h7" stroke="#687C67" stroke-width="2.5" stroke-linecap="round"/><rect x="${rear-5}" y="-9" width="7" height="22" rx="3" fill="#344566"/>`:
         c.id==='van'?`<rect x="${rear+14}" y="${roof+8}" width="28" height="21" rx="3" fill="${c.color}" stroke="#5D9AA5" stroke-width="2"/><path d="M-2 -7 V14 M4 -2 h7" stroke="#4E8593" stroke-width="2"/>`:
-        c.id==='race'?`<path d="M${rear+3} -13 V-25 M${rear-3} -26 h22" stroke="#344566" stroke-width="4" stroke-linecap="round"/><path d="M-29 -5 H26" stroke="#FFF8DE" stroke-width="8"/><circle cx="-2" cy="-2" r="10" fill="#FFF8DE"/><text x="-2" y="3" font-size="14" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
+        c.id==='race'?`<path d="M${rear+3} -13 V-33 M${rear-9} -34 h31" stroke="#344566" stroke-width="4" stroke-linecap="round"/><path d="M-29 -5 H26" stroke="#FFF8DE" stroke-width="8"/><circle cx="-2" cy="-2" r="10" fill="#FFF8DE"/><text x="-2" y="3" font-size="14" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
         `<path d="M-3 -3 h8 M13 -9 V12" stroke="#577C94" stroke-width="2" stroke-linecap="round"/>`;
     }
     return [
@@ -1590,24 +1659,13 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
   CARS.forEach(c=>{
     const b=document.createElement('button');b.type='button';b.dataset.car=c.id;
-    b.innerHTML=`<svg viewBox="-90 -52 180 100" aria-hidden="true">${carArt(c)}</svg><small></small>`;
-    b.addEventListener('click',()=>{if(busy)return;day.carType=c.id;save('mf_day',day);renderCar();SFX.click();});
+    b.innerHTML=`<svg viewBox="-90 -60 180 108" aria-hidden="true">${carArt(c)}</svg><small></small>`;
+    b.addEventListener('click',()=>mutate(()=>{day.carType=c.id;save('mf_day',day);renderCar();SFX.click();}));
     $('#car-picker').appendChild(b);
   });
 
   /* ---------- Train adventure ---------- */
   const trainPath = 'M70 225 H530 Q570 225 570 185 V150 Q570 110 530 110 H70 Q30 110 30 150 V185 Q30 225 70 225';
-  const TRAINS = [
-    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#71BBA6',accent:'#EAB564'},
-    {id:'passenger',en:'Passenger',sv:'Persontåg',color:'#86BDE0',accent:'#F1D48C'},
-    {id:'goods',en:'Goods',sv:'Godståg',color:'#DDA07C',accent:'#A3BD91'},
-    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#E6ECEA',accent:'#86B4DA'},
-    {id:'metro',en:'Metro',sv:'Tunnelbana',color:'#B7A5D8',accent:'#F0D18A'},
-    {id:'tram',en:'Tram',sv:'Spårvagn',color:'#91C6B0',accent:'#E8BD6D'},
-    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#E1B76F',accent:'#8DA9C8'},
-    {id:'toy',en:'Toy train',sv:'Leksakståg',color:'#EAA8BD',accent:'#97BBD8'}
-  ];
-  if(!TRAINS.some(t=>t.id===day.trainType)) day.trainType=null;
   const selectedTrain=()=>TRAINS.find(t=>t.id===day.trainType)||TRAINS[dayIndex()%TRAINS.length];
   function trainWheels(big=false){
     const r=big?9:7;
@@ -1625,27 +1683,35 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       case 'goods':
         art=`<rect x="-29" y="-49" width="25" height="36" rx="3" fill="${a}" stroke="${stroke}" stroke-width="2"/>${win(-25,-44,17,16)}<rect x="-3" y="-35" width="36" height="22" rx="4" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M5 -30 v12 M12 -30 v12 M19 -30 v12 M26 -30 v12 M-30 -51 H-2" stroke="#9B725D" stroke-width="3"/><path d="M-30 -13 H34" stroke="#5C7685" stroke-width="4"/>`;break;
       case 'bullet':
-        art=`<path d="M-31 -14 V-43 Q-31 -51 -22 -51 H-2 Q19 -48 39 -16 Q40 -12 34 -12 H-29Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-30 -22 H32" stroke="${a}" stroke-width="5"/>${win(-24,-43,16,13)}<path d="M0 -44 Q12 -38 20 -29 H0Z" fill="#5C7F98"/><path d="M27 -18 h8" stroke="#FFF0B5" stroke-width="3"/>`;break;
+        art=`<path d="M-31 -14 V-43 Q-31 -51 -22 -51 H-2 Q25 -48 45 -16 Q46 -12 38 -12 H-29Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-30 -22 H32" stroke="${a}" stroke-width="5"/>${win(-24,-43,16,13)}<path d="M0 -44 Q12 -38 20 -29 H0Z" fill="#5C7F98"/><path d="M27 -18 h8" stroke="#FFF0B5" stroke-width="3"/>`;break;
       case 'metro':
-        art=`<rect x="-30" y="-53" width="61" height="40" rx="9" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="10" y="-46" width="18" height="23" rx="5" fill="#526E86"/>${win(-24,-45,12,16)}${win(-7,-45,12,16)}<path d="M-29 -20 H30" stroke="${a}" stroke-width="5"/><circle cx="25" cy="-17" r="3" fill="#FFF0B5"/>`;break;
+        art=`<rect x="-30" y="-60" width="61" height="47" rx="4" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="9" y="-53" width="19" height="30" rx="5" fill="#526E86"/>${win(-24,-45,12,16)}${win(-7,-45,12,16)}<path d="M-29 -20 H30" stroke="${a}" stroke-width="5"/><circle cx="25" cy="-17" r="3" fill="#FFF0B5"/>`;break;
       case 'tram':
         art=`<rect x="-30" y="-50" width="61" height="37" rx="5" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-34 -51 H34 M-6 -53 L3 -66 13 -54 M-2 -67 H19" fill="none" stroke="#647C90" stroke-width="3" stroke-linecap="round"/><path d="M-29 -22 H30" stroke="${a}" stroke-width="7"/>${win(-25,-43,12,16)}${win(-8,-43,12,16)}${win(10,-43,15,16)}`;break;
       case 'diesel':
         art=`<path d="M-29 -13 V-43 H-12 V-55 H12 L24 -42 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="-31" y="-34" width="18" height="21" rx="3" fill="${a}"/><path d="M-11 -55 H13 L27 -42" fill="none" stroke="${stroke}" stroke-width="3"/>${win(-6,-49,14,15)}<path d="M12 -49 L20 -41 V-34 H12Z" fill="#DDF3F8"/><path d="M-24 -29 v11 M-18 -29 v11 M-10 -21 H24" stroke="#8A805E" stroke-width="3"/>`;break;
       default:
-        art=`<rect x="-29" y="-59" width="28" height="46" rx="8" fill="${c}" stroke="${stroke}" stroke-width="2"/>${win(-23,-51,16,18)}<path d="M-34 -60 Q-15 -71 5 -60Z" fill="${a}" stroke="${stroke}" stroke-width="2"/><rect x="-4" y="-37" width="35" height="24" rx="10" fill="${a}" stroke="${stroke}" stroke-width="2"/><path d="M14 -39 V-54 H24 V-39" fill="#EBC76D" stroke="${stroke}" stroke-width="2"/><circle cx="30" cy="-25" r="6" fill="#FFF0B5"/>`;
+        art=`<rect x="-29" y="-59" width="28" height="46" rx="8" fill="${c}" stroke="${stroke}" stroke-width="2"/>${win(-23,-51,16,18)}<path d="M-36 -60 Q-15 -83 7 -60Z" fill="${a}" stroke="${stroke}" stroke-width="2"/><rect x="-4" y="-37" width="35" height="24" rx="10" fill="${a}" stroke="${stroke}" stroke-width="2"/><path d="M14 -39 V-54 H24 V-39" fill="#EBC76D" stroke="${stroke}" stroke-width="2"/><circle cx="30" cy="-25" r="6" fill="#FFF0B5"/>`;
     }
     return art+trainWheels(t.id==='steam'||t.id==='toy');
   }
   function trainCarriage(t,icon='',i=0){
-    const c=t.id==='toy'?['#EAA8BD','#97BBD8','#EBC76D','#96C8AD'][i%4]:t.color;
+    const c=t.id==='toy'?['#F43F9C','#258FF2','#FFD128','#20BB70'][i%4]:t.color;
     let art='';
     if(t.id==='goods'){
-      art=`<path d="M-30 -12 H30" stroke="#6F7C87" stroke-width="5"/><rect x="-26" y="-52" width="52" height="38" rx="3" fill="${i%2?t.accent:c}" stroke="#96745C" stroke-width="2"/><path d="M-21 -47 H21 M-21 -20 H21 M-18 -47 v27 M18 -47 v27" stroke="#B5896E" stroke-width="2"/>`;
+      art=`<path d="M-30 -12 H30" stroke="#6F7C87" stroke-width="5"/><rect x="-21" y="-57" width="22" height="18" rx="2" fill="#FFC827"/><rect x="2" y="-60" width="22" height="21" rx="2" fill="#E54D42"/><rect x="-26" y="-39" width="52" height="25" rx="3" fill="${i%2?t.accent:c}" stroke="#96745C" stroke-width="2"/><path d="M-21 -47 H21 M-21 -20 H21 M-18 -47 v27 M18 -47 v27" stroke="#B5896E" stroke-width="2"/>`;
     }else if(t.id==='steam'){
       art=`<rect x="-27" y="-48" width="54" height="35" rx="5" fill="${t.accent}" stroke="#7F8C7D" stroke-width="2"/><path d="M-31 -49 Q0 -61 31 -49" fill="${c}" stroke="#5C7685" stroke-width="3"/>`;
+    }else if(t.id==='bullet'){
+      art=`<path d="M-29 -14 V-32 Q-29 -45 -14 -45 H14 Q29 -45 29 -32 V-14Z" fill="${c}" stroke="#5C7685" stroke-width="2"/><path d="M-28 -22 H28" stroke="${t.accent}" stroke-width="5"/><path d="M-22 -37 H22" stroke="#648CA7" stroke-width="7" stroke-linecap="round"/>`;
+    }else if(t.id==='metro'){
+      art=`<rect x="-28" y="-60" width="56" height="47" rx="3" fill="${c}" stroke="#5C7685" stroke-width="2"/><rect x="-24" y="-51" width="48" height="16" rx="2" fill="#354C60"/><path d="M-27 -22 H27" stroke="${t.accent}" stroke-width="6"/><path d="M-7 -52 V-14 M8 -52 V-14" stroke="#DCD5FF" stroke-width="2"/>`;
+    }else if(t.id==='tram'){
+      art=`<rect x="-28" y="-53" width="56" height="40" rx="4" fill="${c}" stroke="#5C7685" stroke-width="2"/><path d="M-32 -54 H32" stroke="#526A7B" stroke-width="4"/><path d="M-26 -23 H26" stroke="${t.accent}" stroke-width="7"/><path d="M-21 -46 V-31 M-7 -46 V-31 M7 -46 V-31 M21 -46 V-31" stroke="#DDF3F8" stroke-width="9"/>`;
+    }else if(t.id==='toy'){
+      art=`<path d="M-27 -14 V-44 Q0 -63 27 -44 V-14Z" fill="${c}" stroke="#5C7685" stroke-width="2"/><path d="M-32 -44 Q0 -69 32 -44" fill="${t.accent}" stroke="#5C7685" stroke-width="3"/>`;
     }else{
-      art=`<rect x="-28" y="-52" width="56" height="39" rx="${t.id==='bullet'?12:7}" fill="${c}" stroke="#5C7685" stroke-width="2"/><path d="M-27 -22 H27" stroke="${t.accent}" stroke-width="5"/><rect x="-23" y="-45" width="13" height="16" rx="3" fill="#DDF3F8"/><rect x="10" y="-45" width="13" height="16" rx="3" fill="#DDF3F8"/>`;
+      art=`<rect x="-28" y="-52" width="56" height="39" rx="7" fill="${c}" stroke="#5C7685" stroke-width="2"/><path d="M-27 -22 H27" stroke="${t.accent}" stroke-width="5"/><rect x="-23" y="-45" width="13" height="16" rx="3" fill="#DDF3F8"/><rect x="10" y="-45" width="13" height="16" rx="3" fill="#DDF3F8"/>`;
     }
     // Task badge remains prominent on every vehicle type, including freight wagons.
     const badge=icon?`<rect x="-18" y="-49" width="36" height="34" rx="7" fill="#FFFBEE" fill-opacity=".95"/><svg x="-16" y="-48" width="32" height="32">${icon}</svg>`:'';
@@ -1662,12 +1728,12 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   TRAINS.forEach(t=>{
     const b=document.createElement('button');b.type='button';b.dataset.train=t.id;
     b.innerHTML=`<svg viewBox="-73 -78 150 90" aria-hidden="true"><g transform="translate(-36 0) scale(.85)">${trainCarriage(t)}</g><g transform="translate(34 0) scale(.85)">${trainEngine(t)}</g></svg><small></small>`;
-    b.addEventListener('click',()=>{if(busy)return;day.trainType=t.id;save('mf_day',day);renderTrain();SFX.click();});
+    b.addEventListener('click',()=>mutate(()=>{day.trainType=t.id;save('mf_day',day);renderScenes();SFX.click();}));
     $('#train-picker').appendChild(b);
   });
   let trainMoving = false;
+  function renderScenes(){renderCar();renderTrain();}
   function renderTrain(){
-    renderCar();
     renderTrainPicker();
     const active = settings.version === 'train';
     document.body.classList.toggle('train-version', active);
@@ -1705,6 +1771,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     $('#train-caption').textContent = settings.lang==='sv' ? `${train.sv} · ${completed.length} av ${items.length} vagnar klara` : `${train.en} · ${completed.length} of ${items.length} carriages ready`;
   }
   function trainStep(i, cb){
+    trainMoving=true;
     const source = document.querySelectorAll('.step .knob')[i];
     const cars = $('#train-scene').querySelectorAll('.train-vehicle');
     const completed = steps().filter(s=>doneList().includes(s.id));
@@ -1740,7 +1807,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
           {scale:'1',rotate:'0deg',offset:1}
         ],{duration:2500,easing:'ease-in-out'});
         tone(440,.35,{vol:.08,to:660});
-        setTimeout(cb,2550);
+        setTimeout(()=>{trainMoving=false;cb();},2550);
       },1700);
     },1250);
   }
@@ -1762,50 +1829,57 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
         const angle=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI-180;
         v.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${angle})`);
       });
-      if(u<1) requestAnimationFrame(frame); else { trainMoving=false; renderTrain(); cb(); }
+      if(u<1) requestAnimationFrame(frame); else { trainMoving=false; renderScenes(); cb(); }
     }
     requestAnimationFrame(frame);
   }
-  document.querySelectorAll('[data-version]').forEach(b=>b.addEventListener('click',()=>{
-    if(busy) return;
-    settings.version=b.dataset.version; save('mf_settings',settings); $('#finale').hidden=true;
-    renderProgress(); SFX.click();
-  }));
+  document.querySelectorAll('[data-version]').forEach(b=>b.addEventListener('click',()=>mutate(()=>{settings.version=b.dataset.version;save('mf_settings',settings);$('#finale').hidden=true;renderProgress();SFX.click();})));
 
   /* ---------- Actions ---------- */
+  let animalAnimationTimer=null;
   function playAnim(name, cb, sfx){
+    clearTimeout(animalAnimationTimer);
     wrap.className = 'animal-wrap'; void wrap.offsetWidth;
     wrap.classList.add('anim-' + name); animalEl.classList.add('happy');
     const s = sfx || name; if (SFX[s]) SFX[s]();
-    setTimeout(()=>{ wrap.className = restWrap(); animalEl.classList.remove('happy'); cb && cb(); }, ANIM_MS[name] || 1500);
+    animalAnimationTimer=setTimeout(()=>{ wrap.className = restWrap(); animalEl.classList.remove('happy'); cb && cb(); }, ANIM_MS[name] || 1500);
   }
   function complete(i){
-    const s = steps()[i]; if (doneList().includes(s.id)) return;
-    busy = true; doneList().push(s.id); save('mf_day', day); renderProgress();
-    const after = () => {
-      busy = false;
-      const remaining = steps().filter(x => !doneList().includes(x.id));
-      if (!remaining.length) (isNight() ? nightFinale : finale)();
+    const id=steps()[i]?.id;
+    if(!id||busy||!$('#sheet').hidden)return;
+    return mutate(()=>completeTask(id));
+  }
+  function completeTask(id){
+    const i=steps().findIndex(s=>s.id===id),s=steps()[i];
+    if(!s||doneList().includes(id))return;
+    const actionDate=day.date;
+    busy=true;doneList().push(id);
+    if(isAdhoc())day.adhocDoneAt[id]=Date.now();
+    save('mf_settings',settings);save('mf_day',day);renderProgress();
+    const allDone=()=>steps().length>0&&steps().every(task=>doneList().includes(task.id));
+    const currentDay=()=>{
+      if(todayKey()===actionDate)return true;
+      releaseBusy();return false;
     };
-    if (settings.version === 'car'){
-      if(isAdhoc()){day.adhocDoneAt[s.id]=Date.now();save('mf_day',day);}
-      carStep(i,()=>{
-        if(steps().length && steps().every(x=>doneList().includes(x.id))){
-          carDrive(()=>{busy=false;SFX.fanfare();confetti();if(!isAdhoc())$('#finale').hidden=false;});
-        }else busy=false;
-      });
-    }
-    else if (settings.version === 'train'){
-      if(isAdhoc()){ day.adhocDoneAt[s.id]=Date.now(); save('mf_day',day); }
-      trainStep(i,()=>{
-        if(steps().length && steps().every(x=>doneList().includes(x.id))){ trainLap(()=>{ busy=false; if(!isAdhoc()){ $('#finale').hidden=false; SFX.fanfare(); confetti(); } }); }
-        else busy=false;
-      });
-    }
-    else if (isAdhoc()){ day.adhocDoneAt[s.id] = Date.now(); save('mf_day', day); renderTiles(); if (isAway()) fireworksOnly(()=>{ busy = false; }); else launchStep(()=>{ busy = false; }); }
-    else if (isNight()) heroStep(i, after);
-    else if (isAway()){ SFX.click(); [N.C5,N.E5].forEach((f,k)=>tone(f,.25,{when:k*.12,vol:.14})); setTimeout(after, 900); }
-    else playAnim(s.anim, after, s.sfx);
+    const celebrate=()=>{
+      releaseBusy();if(actionDate!==todayKey())return;
+      SFX.fanfare();confetti();if(!isAdhoc())$('#finale').hidden=false;
+    };
+    const after=()=>{
+      releaseBusy();
+      if(actionDate===todayKey()&&allDone())(isNight()?nightFinale:finale)();
+    };
+    const afterVehicleStep=(drive,celebrateAnytime)=>{
+      if(!currentDay())return;
+      if(!allDone()){releaseBusy();return;}
+      drive(()=>{if(isAdhoc()&&!celebrateAnytime)releaseBusy();else celebrate();});
+    };
+    if(settings.version==='car')carStep(i,()=>afterVehicleStep(carDrive,true));
+    else if(settings.version==='train')trainStep(i,()=>afterVehicleStep(trainLap,false));
+    else if(isAdhoc()){if(isAway())fireworksOnly(releaseBusy);else launchStep(releaseBusy);}
+    else if(isNight())heroStep(i,after);
+    else if(isAway()){SFX.click();[N.C5,N.E5].forEach((f,k)=>tone(f,.25,{when:k*.12,vol:.14}));setTimeout(after,900);}
+    else playAnim(s.anim,after,s.sfx);
   }
   // Any time: rocket launch, fireworks, parachute home
   function fireworksOnly(cb){
@@ -1843,43 +1917,42 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   // Friend went away (until midnight) / bring friend back.
   // Both wait AWAY_DELAY_MS after the button so the grown-up can close the panel and show the child.
   const AWAY_DELAY_MS = 5000;
-  function sendAway(){
-    if (busy || isAway()) return;
-    busy = true; closeSheet();
-    setTimeout(()=>{
-      day.away = true; save('mf_day', day);
-      animalEl.classList.add('sad'); document.body.classList.add('away');
-      wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-leave'); SFX.sad();
-      setTimeout(()=>{ busy = false; wrap.className = restWrap(); renderAnimal(); renderText(); }, 4300);
-    }, AWAY_DELAY_MS);
-  }
-  function bringBack(){
-    if (busy || !isAway()) return;
-    busy = true; closeSheet();
-    setTimeout(()=>{
-      day.away = false; save('mf_day', day);
-      document.body.classList.remove('away'); animalEl.classList.remove('sad'); renderAnimal(); renderText();
-      wrap.className = 'animal-wrap'; void wrap.offsetWidth; wrap.classList.add('anim-return'); SFX.back();
-      setTimeout(()=>{ busy = false; wrap.className = restWrap(); }, 3000);
-    }, AWAY_DELAY_MS);
-  }
+  function sendAway(){return mutate(()=>{
+    if(busy||isAway())return;
+    const actionDate=day.date;busy=true;closeSheet();
+    setTimeout(()=>mutate(()=>{
+      if(actionDate!==day.date){releaseBusy();return;}
+      day.away=true;save('mf_day',day);animalEl.classList.add('sad');document.body.classList.add('away');
+      wrap.className='animal-wrap';void wrap.offsetWidth;wrap.classList.add('anim-leave');SFX.sad();
+      setTimeout(()=>{renderAnimal();renderText();releaseBusy();},4300);
+    },{whileBusy:true}),AWAY_DELAY_MS);
+  });}
+  function bringBack(){return mutate(()=>{
+    if(busy||!isAway())return;
+    const actionDate=day.date;busy=true;closeSheet();
+    setTimeout(()=>mutate(()=>{
+      if(actionDate!==day.date){releaseBusy();return;}
+      day.away=false;save('mf_day',day);document.body.classList.remove('away');animalEl.classList.remove('sad');renderAnimal();renderText();
+      wrap.className='animal-wrap';void wrap.offsetWidth;wrap.classList.add('anim-return');SFX.back();
+      setTimeout(releaseBusy,3000);
+    },{whileBusy:true}),AWAY_DELAY_MS);
+  });}
   $('#away').addEventListener('click', sendAway);
   $('#return').addEventListener('click', bringBack);
-  document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', ()=>{ if (mode !== b.dataset.mode){ SFX.click(); setMode(b.dataset.mode); } }));
+  document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>mutate(()=>{if(mode!==b.dataset.mode){SFX.click();setMode(b.dataset.mode);}})));
 
   animalEl.addEventListener('click', ()=>{ if (busy || isAway() || (isNight() && isAsleep())) return; playAnim('hello'); });
   animalEl.addEventListener('keydown', e=>{ if (e.key==='Enter'||e.key===' '){ e.preventDefault(); animalEl.click(); } });
 
-  document.querySelectorAll('[data-lang]').forEach(b => b.addEventListener('click', ()=>{ settings.lang = b.dataset.lang; save('mf_settings', settings); SFX.click(); renderAnimal(); renderText(); renderTrain(); }));
+  document.querySelectorAll('[data-lang]').forEach(b=>b.addEventListener('click',()=>mutate(()=>{settings.lang=b.dataset.lang;save('mf_settings',settings);SFX.click();renderAnimal();renderText();renderScenes();},{whileBusy:true})));
   let soundHold = null, soundHeld = false;
   $('#sound').addEventListener('pointerdown', ()=>{ soundHeld = false; clearTimeout(soundHold); soundHold = setTimeout(()=>{ soundHeld = true; toast(`audio: ${settings.sound ? 'on' : 'muted'} · engine: ${ctx ? ctx.state : 'not started'} · unlocked: ${unlocked}`); }, 900); });
   ['pointerup','pointercancel','pointerleave'].forEach(ev => $('#sound').addEventListener(ev, ()=>clearTimeout(soundHold)));
   $('#sound').addEventListener('click', ()=>{
     if (soundHeld){ soundHeld = false; return; }
-    settings.sound = !settings.sound; save('mf_settings', settings);
-    $('#sound').textContent = settings.sound ? '🔊' : '🔇'; $('#sound').setAttribute('aria-pressed', String(settings.sound));
+    mutate(()=>{settings.sound=!settings.sound;save('mf_settings',settings);applySoundSetting();
     if (settings.sound) SFX.click();
-    renderText();
+    renderText();},{whileBusy:true});
   });
 
   /* ---------- Parent sheet (hold 1.2s) ---------- */
@@ -1890,18 +1963,37 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   ['pointerup','pointercancel','pointerleave'].forEach(ev => gear.addEventListener(ev, cancelHold));
   gear.addEventListener('contextmenu', e => e.preventDefault());
   gear.addEventListener('keydown', e => { if ((e.key==='Enter'||e.key===' ') && !busy){ e.preventDefault(); openSheet(); } });
-  function openSheet(){ renderEditor(); $('#sheet').hidden = false; SFX.click(); }
-  function closeSheet(){ $('#sheet').hidden = true; }
+  let sheetReturnFocus=null;
+  const sheetFocusables=()=>[...$('#sheet').querySelectorAll('button,[tabindex]')].filter(el=>!el.disabled&&el.tabIndex>=0&&el.getClientRects().length);
+  function openSheet(){
+    if(busy)return;refreshFromStorage();sheetReturnFocus=document.activeElement;
+    renderEditor();$('#sheet').hidden=false;$('#app').inert=true;gear.inert=true;
+    sheetFocusables()[0]?.focus({preventScroll:true});SFX.click();
+  }
+  function closeSheet(){
+    $('#sheet').hidden=true;$('#app').inert=false;gear.inert=false;
+    (sheetReturnFocus?.isConnected?sheetReturnFocus:gear).focus({preventScroll:true});
+  }
+  document.addEventListener('keydown',e=>{
+    if($('#sheet').hidden)return;
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeSheet();return;}
+    if(e.key==='Tab'){
+      const controls=sheetFocusables(),first=controls[0],last=controls[controls.length-1];
+      if(!$('#sheet').contains(document.activeElement)){e.preventDefault();first?.focus();}
+      else if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}
+    }
+  },true);
   $('#close-sheet').addEventListener('click', closeSheet);
   $('#sheet').addEventListener('click', e => { if (e.target === $('#sheet')) closeSheet(); });
-  $('#undo').addEventListener('click', ()=>{ const id = doneList().pop(); if (isAdhoc() && id) delete day.adhocDoneAt[id]; save('mf_day', day); renderProgress(); renderTown(); SFX.click(); });
-  $('#reset').addEventListener('click', ()=>{
+  $('#undo').addEventListener('click',()=>mutate(()=>{const id=doneList().pop();if(isAdhoc()&&id)delete day.adhocDoneAt[id];save('mf_day',day);renderProgress();renderTown();SFX.click();}));
+  $('#reset').addEventListener('click',()=>mutate(()=>{
     day[R().key] = [];
     if (isAdhoc()){ day.adhocDoneAt = {}; day.adhocArmed = []; }
     save('mf_day', day); buildSteps(); renderProgress(); renderTown(); SFX.click(); closeSheet();
-  });
+  }));
   const picker = $('#animal-picker');
-  ANIMALS.forEach((a,i)=>{ const b = document.createElement('button'); b.type='button'; b.setAttribute('aria-label', a.en); b.innerHTML = svgWrap(a.svg); b.addEventListener('click', ()=>{ day.animal = i; save('mf_day', day); renderAnimal(); SFX.click(); }); picker.appendChild(b); });
+  ANIMALS.forEach((a,i)=>{ const b = document.createElement('button'); b.type='button'; b.setAttribute('aria-label', a.en); b.innerHTML = svgWrap(a.svg); b.addEventListener('click',()=>mutate(()=>{day.animal=i;save('mf_day',day);renderAnimal();SFX.click();})); picker.appendChild(b); });
 
   /* ---------- Confetti ---------- */
   function confetti(){
@@ -1967,7 +2059,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
 
   /* ---------- Midnight rollover while open ---------- */
-  setInterval(()=>{ if (!busy && day.date !== todayKey()){ day = freshDay(); save('mf_day', day); renderAnimal(); buildSteps(); renderProgress(); renderTown(); } }, 60000);
+  setInterval(()=>{if(!busy)mutate(()=>{save('mf_day',day);});},60000);
   window.addEventListener('resize', ()=>renderProgress());
 
   setInterval(expireAdhoc, 5000);
@@ -1990,7 +2082,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     }
     try {
       await navigator.serviceWorker.register('./sw.js', {scope:'./', updateViaCache:'none'});
-      const registration = await navigator.serviceWorker.ready;
+      const registration=await new Promise((resolve,reject)=>{
+        const timer=setTimeout(()=>reject(new Error('Offline installation timed out')),15000);
+        navigator.serviceWorker.ready.then(reg=>{clearTimeout(timer);resolve(reg);},err=>{clearTimeout(timer);reject(err);});
+      });
       const reply = await new Promise((resolve,reject)=>{
         const channel = new MessageChannel();
         const timer = setTimeout(()=>reject(new Error('Offline check timed out')), 10000);
@@ -2006,7 +2101,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   buildTown(); buildTiles(); buildSkyline(); renderAnimal(); expireAdhoc();
   document.body.classList.toggle('night', isNight());
   buildSteps(); renderProgress(); renderTown();
-  $('#sound').textContent = settings.sound ? '🔊' : '🔇';
+  mutate(()=>{save('mf_settings',settings);save('mf_day',day);});
+  applySoundSetting();
   prepareOffline();
 })();
 </script>
