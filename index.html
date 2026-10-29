@@ -12,6 +12,8 @@
 <meta name="color-scheme" content="light">
 <style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif;background:#FBFDFF}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Little Routines</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@600;800&display=swap">
 <style>
   :root{
@@ -526,6 +528,24 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
 @media(min-width:820px) and (orientation:landscape){#train-scene{inset:90px 12px 45px}}
 </style>
 
+<style>
+/* Car workshop and winding finish-line course. */
+#car-scene{display:none;position:absolute;inset:76px 12px 35px;z-index:2}
+#car-scene > svg{width:100%;height:100%;overflow:visible}
+#car-caption{position:absolute;bottom:10px;left:10px;right:10px;text-align:center;font:15px Fredoka,sans-serif;color:var(--ink)}
+body.car-version #car-scene{display:block}
+body.car-version #stage{background:linear-gradient(#E4F0F0,#D2E4D6)}
+body.night.car-version #stage{background:linear-gradient(#18304A,#25473F)}
+body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .sun,body.car-version #stage > .cloud,body.car-version #stage > .hill,body.car-version #stage > .mountains,body.car-version #stage > .birds,body.car-version #town,body.car-version .zzz,body.car-version #skyline,body.car-version #starfield,body.car-version .moon,body.car-version #away,body.car-version #return,body.car-version #pick-label,body.car-version #animal-picker{display:none}
+#car-options,#train-options{margin:14px 0 20px}
+#car-options[hidden],#train-options[hidden]{display:none}
+.car-picker{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.car-picker button{min-height:82px;border:2px solid var(--border);border-radius:14px;background:var(--card);padding:5px 3px;font-size:12px;line-height:1.2}
+.car-picker button[aria-pressed="true"]{border-color:var(--grass);box-shadow:0 0 0 2px var(--grass)}
+.car-picker svg{display:block;width:100%;height:48px}
+.car-picker small{font:inherit}
+@media(min-width:820px) and (orientation:landscape){#car-scene{inset:88px 15px 42px}}
+</style>
 </head>
 <body>
 
@@ -586,6 +606,8 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
       </svg></div>
       <div class="animal" id="animal" role="button" tabindex="0" aria-label="Today's friend"></div>
     </div>
+    <div id="car-scene" role="img" aria-label="Build a car"></div>
+    <div id="car-caption" hidden></div>
     <div id="train-scene" role="img" aria-label="Routine train"></div>
     <div id="train-caption" hidden></div>
     <div class="friend-tag"><span id="friend-label">Today's friend:</span> <b id="friend-name">Bunny</b></div>
@@ -607,10 +629,20 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
   <div class="sheet-in" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
     <h2 id="sheet-title">Grown-ups</h2>
     <p id="sheet-p">Undo a step, start the morning over, or pick a different friend for today.</p>
+    <p id="offline-status" role="status" style="font-size:13px;color:var(--muted)"></p>
     <div class="sheet-label" id="version-label">Adventure</div>
     <div class="row" role="group" aria-labelledby="version-label">
       <button class="btn train-choice" data-version="animal" aria-pressed="true">🐰 <span>Animal</span></button>
       <button class="btn train-choice" data-version="train" aria-pressed="false">🚂 <span>Train</span></button>
+      <button class="btn train-choice" data-version="car" aria-pressed="false">🚗 <span>Car</span></button>
+    </div>
+    <div id="train-options" hidden>
+      <div class="sheet-label" id="train-pick-label">Today’s train</div>
+      <div class="car-picker" id="train-picker" role="group" aria-labelledby="train-pick-label"></div>
+    </div>
+    <div id="car-options" hidden>
+      <div class="sheet-label" id="car-pick-label">Choose your car</div>
+      <div class="car-picker" id="car-picker" role="group" aria-labelledby="car-pick-label"></div>
     </div>
     <div class="row">
       <button class="btn" id="undo">↩︎ <span>Undo last step</span></button>
@@ -912,10 +944,12 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
   let settings = Object.assign({lang:'en', sound:true}, load('mf_settings', {}));
   if (!T[settings.lang]) settings.lang = 'en';
   settings.sound = settings.sound !== false;
-  settings.version = settings.version === 'train' || settings.version === 'aquarium' ? 'train' : 'animal';
+  settings.version = ['train','car'].includes(settings.version) ? settings.version : settings.version === 'aquarium' ? 'train' : 'animal';
+  // Vehicle choices now live in daily state, like the animal override.
+  delete settings.carType;
   if (!settings.routines || !Array.isArray(settings.routines.morning) || !Array.isArray(settings.routines.night)) settings.routines = { morning: DEFAULT_ROUTINES.morning.slice(), night: DEFAULT_ROUTINES.night.slice() };
   buildRoutines(settings.routines);
-  const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null, away: false});
+  const freshDay = () => ({date: todayKey(), done: [], nightDone: [], adhocDone: [], adhocDoneAt: {}, adhocArmed: [], animal: null, carType: null, trainType: null, away: false});
   let day = load('mf_day', null);
   if (!day || day.date !== todayKey()) day = freshDay();
   if (!Array.isArray(day.nightDone)) day.nightDone = [];
@@ -1207,8 +1241,9 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
   function renderText(){
     const s = t(), night = isNight();
     document.documentElement.lang = settings.lang;
+    renderOfflineStatus();
     $('#version-label').textContent = settings.lang === 'sv' ? 'Äventyr' : 'Adventure';
-    document.querySelectorAll('[data-version]').forEach(b=>{ b.setAttribute('aria-pressed', String(settings.version===b.dataset.version)); b.querySelector('span').textContent = b.dataset.version==='train' ? (settings.lang==='sv'?'Tåg':'Train') : (settings.lang==='sv'?'Djur':'Animal'); });
+    document.querySelectorAll('[data-version]').forEach(b=>{ b.setAttribute('aria-pressed', String(settings.version===b.dataset.version)); b.querySelector('span').textContent = b.dataset.version==='car' ? (settings.lang==='sv'?'Bil':'Car') : b.dataset.version==='train' ? (settings.lang==='sv'?'Tåg':'Train') : (settings.lang==='sv'?'Djur':'Animal'); });
     $('#greet').textContent = isAdhoc() ? s.greetAdhoc : night ? s.greetNight : s.greet;
     $('#mode-adhoc').setAttribute('aria-pressed', String(isAdhoc())); $('#mode-adhoc').setAttribute('aria-label', s.modeAdhoc);
     $('#tiles-hint').textContent = s.tilesHint;
@@ -1230,6 +1265,14 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
     $('#finale-sub').textContent = night ? s.allDoneNightSub : s.allDoneSub;
     $('#finale .stars').innerHTML = night ? '<span>✨</span><span>🌙</span><span>✨</span>' : '<span>⭐</span>'.repeat(6);
     $('#banner').textContent = night ? s.bannerNight : s.banner;
+    $('#stage').setAttribute('aria-label', settings.version==='car' ? (settings.lang==='sv'?'Bilverkstad':'Car workshop') : settings.version==='train' ? (settings.lang==='sv'?'Rutintåg':'Routine train') : (settings.lang==='sv'?'Dagens vän':"Today's friend"));
+    if(settings.version==='train') $('#sheet-p').textContent=settings.lang==='sv'?'Ångra ett steg, välj ett tåg eller ändra dina rutiner.':'Undo a step, choose a train, or edit your routines.';
+    if(settings.version==='car'){
+      $('#sheet-p').textContent=settings.lang==='sv'?'Ångra ett steg, välj en bil eller ändra dina rutiner.':'Undo a step, choose a car, or edit your routines.';
+      $('#finale-title').textContent=settings.lang==='sv'?'Dags att köra!':'Ready to roll!';
+      $('#finale-sub').textContent=settings.lang==='sv'?'Du byggde hela bilen! Tryck för att stänga.':'You built the whole car! Tap to close.';
+      $('#banner').textContent=settings.lang==='sv'?'Bilen är klar — bra jobbat! 🚗':'Car complete — great work! 🚗';
+    }
     $('#holdhint').textContent = s.hold;
     $('#sound').setAttribute('aria-label', settings.sound ? s.soundOn : s.soundOff);
     $('#lang-en').setAttribute('aria-pressed', String(settings.lang==='en'));
@@ -1409,19 +1452,231 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
     knob.addEventListener('keydown', e => { if ((e.key==='Enter' || e.key===' ') && !el.classList.contains('done') && !busy){ e.preventDefault(); max = track.clientWidth - knob.offsetWidth - 10; setPos(max); complete(i); } });
   }
 
+  /* ---------- Build-a-car adventure ---------- */
+  const CARS = [
+    {id:'hatchback',en:'Hatchback',sv:'Halvkombi',color:'#69BDA8',length:110,width:52,cabin:48},
+    {id:'sedan',en:'Sedan',sv:'Sedan',color:'#79AFD7',length:132,width:52,cabin:48},
+    {id:'coupe',en:'Coupe',sv:'Kupé',color:'#BEA4DC',length:124,width:50,cabin:40},
+    {id:'suv',en:'SUV',sv:'SUV',color:'#D5AB65',length:132,width:64,cabin:66},
+    {id:'pickup',en:'Pickup',sv:'Pickup',color:'#E99C80',length:144,width:58,cabin:42},
+    {id:'van',en:'Van',sv:'Skåpbil',color:'#80BEC9',length:140,width:64,cabin:78},
+    {id:'convertible',en:'Convertible',sv:'Cabriolet',color:'#E8A4BE',length:124,width:54,cabin:48},
+    {id:'race',en:'Race car',sv:'Racerbil',color:'#E5B84F',length:138,width:56,cabin:42}
+  ];
+  const carCourse = 'M110 215 C70 215 42 190 60 155 L105 75 Q125 45 155 75 L215 165 Q235 195 255 165 L315 75 Q335 45 355 75 L415 165 Q435 195 455 165 L500 100 Q530 65 550 105 Q580 190 515 225 C420 275 185 270 110 215 Z';
+  if (!CARS.some(c=>c.id===day.carType)) day.carType = null;
+  const selectedCar = () => CARS.find(c=>c.id===day.carType) || CARS[dayIndex() % CARS.length];
+  let carMoving=false;
+  // Eight visual parts are grouped into as many build stages as the routine has tasks.
+  // The first k completions always produce floor(k*8/n) parts, even out of order.
+  function carTopParts(c){
+    const l=c.length,w=c.width,front=l/2,rear=-l/2,axle=l*.3;
+    const wheel=(x,y)=>`<rect x="${x-11}" y="${y-6}" width="22" height="12" rx="4" fill="#344566"/><path d="M${x-6} ${y} h12" stroke="#A7B8C9" stroke-width="2"/>`;
+    const cabinX=c.id==='pickup'?3:-c.cabin/2;
+    return [
+      `<rect x="${rear+6}" y="${-w/2+4}" width="${l-12}" height="${w-8}" rx="13" fill="#A6B7BD" stroke="#7B919E" stroke-width="2"/><path d="M${rear+10} 0 H${front-10}" stroke="#E7F0F0" stroke-width="5"/>`,
+      wheel(-axle,-w/2-3)+wheel(-axle,w/2+3),
+      wheel(axle,-w/2-3)+wheel(axle,w/2+3),
+      `<rect x="${rear}" y="${-w/2}" width="${l}" height="${w}" rx="${c.id==='van'||c.id==='suv'?10:20}" fill="${c.color}" stroke="#5C7685" stroke-width="2"/><path d="M${rear+15} ${-w/2+5} H${front-19}" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>`,
+      `<rect x="${cabinX}" y="${-w/2+5}" width="${c.cabin}" height="${w-10}" rx="9" fill="#4E6C82"/>`+(c.id==='convertible'?`<rect x="${cabinX+8}" y="${-w/2+10}" width="${c.cabin-19}" height="${w-20}" rx="5" fill="#F7D7B5"/><path d="M${cabinX+14} -13 V13" stroke="#B8856A" stroke-width="5"/>`:`<rect x="${cabinX+9}" y="${-w/2+9}" width="${c.cabin-24}" height="${w-18}" rx="5" fill="${c.color}"/>`),
+      `<path d="M${cabinX+c.cabin-13} ${-w/2+9} h7 v${w-18} h-7Z" fill="#C4E9F4"/><path d="M${cabinX+4} ${-w/2+9} h5 v${w-18} h-5Z" fill="#B8D7E7"/><path d="M${cabinX+c.cabin} ${-w/2-2} h8 M${cabinX+c.cabin} ${w/2+2} h8" stroke="${c.color}" stroke-width="5" stroke-linecap="round"/>`,
+      `<rect x="${front-8}" y="${-w/2+7}" width="6" height="12" rx="3" fill="#FFF2B9"/><rect x="${front-8}" y="${w/2-19}" width="6" height="12" rx="3" fill="#FFF2B9"/><rect x="${rear+2}" y="${-w/2+7}" width="4" height="10" rx="2" fill="#B96564"/><rect x="${rear+2}" y="${w/2-17}" width="4" height="10" rx="2" fill="#B96564"/><path d="M${front-2} -6 V6" stroke="#527083" stroke-width="3"/>`,
+      c.id==='pickup'?`<rect x="${rear+8}" y="${-w/2+7}" width="48" height="${w-14}" rx="4" fill="#B27560"/><path d="M${rear+15} -15 h34 M${rear+15} -5 h34 M${rear+15} 5 h34 M${rear+15} 15 h34" stroke="#DCA98F" stroke-width="2"/>`:
+      c.id==='race'?`<path d="M${rear+9} -34 V34" stroke="#344566" stroke-width="7"/><path d="M10 -8 H${front-12} M10 8 H${front-12}" stroke="#FFF8DE" stroke-width="5"/><circle cx="-5" r="12" fill="#FFF8DE"/><text x="-5" y="5" font-size="15" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
+      c.id==='suv'?`<path d="M-22 -19 H22 M-22 19 H22" stroke="#496379" stroke-width="4"/><circle cx="${rear+3}" r="13" fill="#344566"/><circle cx="${rear+3}" r="7" fill="#8EA6B5"/>`:
+      c.id==='van'?`<path d="M-37 -17 H4 M-37 17 H4 M-16 -17 V17" stroke="#5796A1" stroke-width="3"/>`:
+      `<path d="M${front-24} -10 H${front-17} M${front-24} 10 H${front-17} M-4 ${w/2-4} h8 M-4 ${-w/2+4} h8" stroke="#4E6C82" stroke-width="2.5" stroke-linecap="round"/>`
+    ];
+  }
+  // Side silhouettes for the workshop and picker; overhead art is reserved for the driving course.
+  function carParts(c){
+    const front=c.length/2,rear=-front,axle=c.length*.3;
+    const tall=c.id==='suv'||c.id==='van',roof=tall?-43:c.id==='coupe'||c.id==='race'?-29:-36;
+    const cabRear=c.id==='pickup'?-8:c.id==='van'?rear+5:c.id==='suv'?rear+12:rear+24;
+    const cabFront=c.id==='pickup'?36:front-21;
+    const wheel=x=>`<circle cx="${x}" cy="21" r="14" fill="#344566"/><circle cx="${x}" cy="21" r="8" fill="#D5E4ED"/><circle cx="${x}" cy="21" r="3" fill="#859EAF"/><path d="M${x-5} 16 L${x+5} 26 M${x+5} 16 L${x-5} 26" stroke="#92A9B9" stroke-width="1.5"/>`;
+    const body=`M${rear+5} -10 H${front-16} Q${front} -8 ${front} 1 V13 Q${front} 18 ${front-5} 18 H${axle+16} Q${axle+16} 3 ${axle} 3 Q${axle-16} 3 ${axle-16} 18 H${-axle+16} Q${-axle+16} 3 ${-axle} 3 Q${-axle-16} 3 ${-axle-16} 18 H${rear+4} Q${rear} 18 ${rear} 11 V-3 Q${rear} -10 ${rear+5} -10Z`;
+    let cabin,windows,details;
+    if(c.id==='convertible'){
+      cabin=`<path d="M-31 -9 V-21 Q-23 -28 -17 -20 V-11 M-4 -9 V-21 Q4 -28 10 -20 V-10" fill="#C68D78" stroke="#A57161" stroke-width="2"/><path d="M29 -10 L19 -34 H23 L39 -10" fill="${c.color}" stroke="#5C7685" stroke-width="2"/>`;
+      windows='<path d="M25 -28 L34 -11 H23Z" fill="#C6EAF3"/><path d="M-40 -11 H15" stroke="#F7D7B5" stroke-width="3"/>';
+      details='<path d="M-8 -3 H2 M-35 4 H16" stroke="#B97B98" stroke-width="2" stroke-linecap="round"/>';
+    }else{
+      cabin=`<path d="M${cabRear-9} -9 L${cabRear+5} ${roof+7} Q${cabRear+10} ${roof} ${cabRear+19} ${roof} H${cabFront-17} Q${cabFront-10} ${roof} ${cabFront-6} ${roof+8} L${cabFront+9} -9Z" fill="${c.color}" stroke="#5C7685" stroke-width="2"/>`;
+      const left=cabRear+7,right=cabFront-1,mid=(left+right)/2;
+      windows=`<path d="M${left-5} -13 L${left+6} ${roof+7} H${mid-3} V-13Z M${mid+2} ${roof+7} H${right-9} L${right+4} -13 H${mid+2}Z" fill="#C6EAF3" stroke="#6E96AD" stroke-width="1.5"/><path d="M${cabFront+5} -10 h9" stroke="#5C7685" stroke-width="3" stroke-linecap="round"/>`;
+      details=c.id==='pickup'?`<path d="M${rear+9} -12 H-15 V5 H${rear+9}" fill="#CB8268" stroke="#B57762" stroke-width="2"/><path d="M${rear+15} -5 H-22" stroke="#F4C6AD" stroke-width="2"/>`:
+        c.id==='suv'?`<path d="M${cabRear+1} ${roof-3} H${cabFront-8}" stroke="#496379" stroke-width="4" stroke-linecap="round"/><path d="M-14 -3 h7 M18 -3 h7" stroke="#687C67" stroke-width="2.5" stroke-linecap="round"/><rect x="${rear-5}" y="-9" width="7" height="22" rx="3" fill="#344566"/>`:
+        c.id==='van'?`<rect x="${rear+14}" y="${roof+8}" width="28" height="21" rx="3" fill="${c.color}" stroke="#5D9AA5" stroke-width="2"/><path d="M-2 -7 V14 M4 -2 h7" stroke="#4E8593" stroke-width="2"/>`:
+        c.id==='race'?`<path d="M${rear+3} -13 V-25 M${rear-3} -26 h22" stroke="#344566" stroke-width="4" stroke-linecap="round"/><path d="M-29 -5 H26" stroke="#FFF8DE" stroke-width="8"/><circle cx="-2" cy="-2" r="10" fill="#FFF8DE"/><text x="-2" y="3" font-size="14" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
+        `<path d="M-3 -3 h8 M13 -9 V12" stroke="#577C94" stroke-width="2" stroke-linecap="round"/>`;
+    }
+    return [
+      `<rect x="${rear+6}" y="8" width="${c.length-12}" height="8" rx="4" fill="#A6B7BD" stroke="#7B919E" stroke-width="2"/>`,
+      wheel(-axle),wheel(axle),
+      `<path d="${body}" fill="${c.color}" stroke="#5C7685" stroke-width="2"/><path d="M${rear+9} -5 H${front-21}" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="2.5" stroke-linecap="round"/>`,
+      cabin,windows,
+      `<rect x="${front-10}" y="-5" width="8" height="8" rx="3" fill="#FFF1B5"/><rect x="${rear+1}" y="-5" width="6" height="8" rx="2" fill="#D87B77"/><path d="M${front-7} 12 h9 M${rear-1} 12 h7" stroke="#8DA6B4" stroke-width="3" stroke-linecap="round"/>`,
+      details
+    ];
+  }
+  function carArt(c,built=8){
+    return carParts(c).map((art,i)=>`<g class="car-part" data-part="${i}" data-built="${i<built}" opacity="${i<built?1:.055}">${art}</g>`).join('');
+  }
+  function renderCarPicker(){
+    $('#car-options').hidden=settings.version!=='car';
+    $('#car-pick-label').textContent=settings.lang==='sv'?'Dagens bil':'Today’s car';
+    document.querySelectorAll('[data-car]').forEach(b=>{
+      const c=CARS.find(c=>c.id===b.dataset.car);
+      b.setAttribute('aria-pressed',String(c.id===selectedCar().id));
+      b.querySelector('small').textContent=c[settings.lang];
+      b.setAttribute('aria-label',c[settings.lang]);
+    });
+  }
+  function renderCar(){
+    const active=settings.version==='car';
+    document.body.classList.toggle('car-version',active);$('#car-caption').hidden=!active;renderCarPicker();
+    if(!active||carMoving) return;
+    const items=steps(),completed=items.filter(s=>doneList().includes(s.id));
+    const built=items.length?Math.floor(completed.length*8/items.length):0,c=selectedCar();
+    let out=`<svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg"><g id="car-road" opacity=".35"><path id="car-course" d="${carCourse}" fill="none" stroke="#BDCFBD" stroke-width="40" stroke-linejoin="round"/><path d="${carCourse}" fill="none" stroke="#71888E" stroke-width="30"/><path d="${carCourse}" fill="none" stroke="#F8F5DB" stroke-width="2" stroke-dasharray="8 10"/><path d="M103 203 V227 M109 203 V227 M115 203 V227" stroke="#F9F9E8" stroke-width="4"/></g>`;
+    out+='<g id="car-workshop"><rect x="185" y="111" width="230" height="110" rx="26" fill="#F9F7EB" fill-opacity=".9" stroke="#AEC3BB" stroke-width="2" stroke-dasharray="7 6"/><path d="M202 120 h22 M202 120 v22 M398 212 h-22 M398 212 v-22" fill="none" stroke="#A6BEB5" stroke-width="3"/></g>';
+    out+=`<g id="car-vehicle" transform="translate(300 166)"><g id="car-art" transform="scale(1.3)">${carArt(c,built)}</g></g>`;
+    items.forEach((task,i)=>{const x=300+(i-(items.length-1)/2)*39,done=doneList().includes(task.id);out+=`<g transform="translate(${x} 288)"><circle r="16" fill="${done?'#FFF8DE':'#FFFFFF'}" fill-opacity="${done?1:.3}" stroke="${done?'#69AE92':'#A9C2B8'}" stroke-width="2"/>${done?`<svg x="-12" y="-12" width="24" height="24">${task.icon}</svg>`:''}</g>`;});
+    out+='</svg>';$('#car-scene').innerHTML=out;
+    const caption=settings.lang==='sv'?`${c.sv} · ${completed.length} av ${items.length} byggsteg klara`:`${c.en} · ${completed.length} of ${items.length} build steps done`;
+    $('#car-caption').textContent=caption;$('#car-scene').setAttribute('aria-label',caption);
+  }
+  function carStep(i,cb){
+    carMoving=true;
+    const n=steps().length,k=steps().filter(s=>doneList().includes(s.id)).length;
+    const before=Math.floor((k-1)*8/n),after=Math.floor(k*8/n);
+    const parts=[...document.querySelectorAll('#car-art .car-part')].slice(before,after);
+    parts.forEach(el=>el.setAttribute('opacity','.055'));
+    const a=document.querySelectorAll('.step .knob')[i].getBoundingClientRect(),b=$('#car-art').getBoundingClientRect();
+    const icon=document.createElement('div');icon.className='train-flying-icon';icon.innerHTML=steps()[i].icon;icon.style.left=a.left+'px';icon.style.top=a.top+'px';document.body.appendChild(icon);
+    icon.animate([{translate:'0 0',scale:'1'},{translate:`${b.left+b.width/2-a.left-24}px ${b.top+b.height/2-a.top-24}px`,scale:'.65'}],{duration:850,easing:'ease-in-out',fill:'forwards'});
+    tone(440,.2,{vol:.08,to:660});
+    setTimeout(()=>{
+      icon.remove();
+      parts.forEach((el,j)=>{el.setAttribute('opacity','1');el.style.transformOrigin='0px 0px';el.animate([{opacity:0,translate:'0 -20px',scale:'.7'},{opacity:1,translate:'0 0',scale:'1.15'},{opacity:1,translate:'0 0',scale:'1'}],{duration:900,delay:j*110,easing:'ease-out',fill:'backwards'});tone(523+j*70,.16,{vol:.08,when:j*.11});});
+    },850);
+    setTimeout(()=>{carMoving=false;cb();},2000+Math.max(0,parts.length-1)*110);
+  }
+  function carDrive(cb){
+    carMoving=true;
+    $('#car-road').setAttribute('opacity','.95');$('#car-workshop').setAttribute('opacity','0');
+    const path=$('#car-course'),vehicle=$('#car-vehicle'),art=$('#car-art'),length=path.getTotalLength();
+    // Change to the overhead drawing only for the road sequence.
+    art.innerHTML=carTopParts(selectedCar()).join('');
+    const first=path.getPointAtLength(0),q=path.getPointAtLength(.5),startAngle=Math.atan2(q.y-first.y,q.x-first.x)*180/Math.PI;
+    const started=performance.now(),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // Engine sound uses the existing on-device sound setting and synthesis engine.
+    tone(180,.8,{type:'triangle',vol:.07,to:340});tone(260,1.1,{type:'triangle',vol:.05,when:1,to:400});
+    const driveMs=reduced?900:5700;
+    function frame(now){
+      const elapsed=now-started;
+      if(elapsed<650){
+        const u=elapsed/650;vehicle.setAttribute('transform',`translate(${300+(first.x-300)*u} ${166+(first.y-166)*u}) rotate(${startAngle*u})`);art.setAttribute('transform',`scale(${1.3-.75*u})`);
+      }else if(elapsed<650+driveMs){
+        const u=(elapsed-650)/driveMs,d=length*(u*u*(3-2*u)),p=path.getPointAtLength(d),prev=path.getPointAtLength(Math.max(0,d-.5)),next=path.getPointAtLength(Math.min(length,d+.5));
+        vehicle.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${Math.atan2(next.y-prev.y,next.x-prev.x)*180/Math.PI})`);
+      }else{
+        carMoving=false;renderCar();cb();return;
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+  CARS.forEach(c=>{
+    const b=document.createElement('button');b.type='button';b.dataset.car=c.id;
+    b.innerHTML=`<svg viewBox="-90 -52 180 100" aria-hidden="true">${carArt(c)}</svg><small></small>`;
+    b.addEventListener('click',()=>{if(busy)return;day.carType=c.id;save('mf_day',day);renderCar();SFX.click();});
+    $('#car-picker').appendChild(b);
+  });
+
   /* ---------- Train adventure ---------- */
   const trainPath = 'M70 225 H530 Q570 225 570 185 V150 Q570 110 530 110 H70 Q30 110 30 150 V185 Q30 225 70 225';
-  const trainColors = ['#FFB870','#8DC9EF','#BCA7E8','#8ED4AE','#F3A9BE','#FFE08A','#83D7D2','#B6C5EF'];
+  const TRAINS = [
+    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#71BBA6',accent:'#EAB564'},
+    {id:'passenger',en:'Passenger',sv:'Persontåg',color:'#86BDE0',accent:'#F1D48C'},
+    {id:'goods',en:'Goods',sv:'Godståg',color:'#DDA07C',accent:'#A3BD91'},
+    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#E6ECEA',accent:'#86B4DA'},
+    {id:'metro',en:'Metro',sv:'Tunnelbana',color:'#B7A5D8',accent:'#F0D18A'},
+    {id:'tram',en:'Tram',sv:'Spårvagn',color:'#91C6B0',accent:'#E8BD6D'},
+    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#E1B76F',accent:'#8DA9C8'},
+    {id:'toy',en:'Toy train',sv:'Leksakståg',color:'#EAA8BD',accent:'#97BBD8'}
+  ];
+  if(!TRAINS.some(t=>t.id===day.trainType)) day.trainType=null;
+  const selectedTrain=()=>TRAINS.find(t=>t.id===day.trainType)||TRAINS[dayIndex()%TRAINS.length];
+  function trainWheels(big=false){
+    const r=big?9:7;
+    return [-17,17].map(x=>`<circle cx="${x}" cy="-3" r="${r}" fill="#40556D"/><circle cx="${x}" cy="-3" r="${r-4}" fill="#E2EDF1"/>`).join('');
+  }
+  function trainEngine(t){
+    const c=t.color,a=t.accent,stroke='#5C7685';
+    const win=(x,y,w=15,h=16)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#DDF3F8" stroke="${stroke}" stroke-width="1.5"/>`;
+    let art;
+    switch(t.id){
+      case 'steam':
+        art=`<rect x="-29" y="-60" width="29" height="48" rx="5" fill="${c}" stroke="${stroke}" stroke-width="2"/>${win(-24,-53,19,19)}<rect x="-4" y="-39" width="35" height="27" rx="9" fill="${a}" stroke="${stroke}" stroke-width="2"/><path d="M-33 -61 H5 M18 -40 V-57 H28 V-40" fill="#8399AF" stroke="${stroke}" stroke-width="4" stroke-linejoin="round"/><path d="M29 -17 L38 -8 H24" fill="#E3957B"/><circle cx="29" cy="-27" r="4" fill="#FFF0B5"/>`;break;
+      case 'passenger':
+        art=`<path d="M-30 -13 V-45 Q-30 -53 -22 -53 H8 Q31 -48 34 -24 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-29 -22 H33" stroke="${a}" stroke-width="7"/>${win(-23,-44)}${win(-3,-44)}<path d="M17 -44 Q27 -37 28 -29 H17Z" fill="#DDF3F8"/><circle cx="32" cy="-20" r="3" fill="#FFF0B5"/>`;break;
+      case 'goods':
+        art=`<rect x="-29" y="-49" width="25" height="36" rx="3" fill="${a}" stroke="${stroke}" stroke-width="2"/>${win(-25,-44,17,16)}<rect x="-3" y="-35" width="36" height="22" rx="4" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M5 -30 v12 M12 -30 v12 M19 -30 v12 M26 -30 v12 M-30 -51 H-2" stroke="#9B725D" stroke-width="3"/><path d="M-30 -13 H34" stroke="#5C7685" stroke-width="4"/>`;break;
+      case 'bullet':
+        art=`<path d="M-31 -14 V-43 Q-31 -51 -22 -51 H-2 Q19 -48 39 -16 Q40 -12 34 -12 H-29Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-30 -22 H32" stroke="${a}" stroke-width="5"/>${win(-24,-43,16,13)}<path d="M0 -44 Q12 -38 20 -29 H0Z" fill="#5C7F98"/><path d="M27 -18 h8" stroke="#FFF0B5" stroke-width="3"/>`;break;
+      case 'metro':
+        art=`<rect x="-30" y="-53" width="61" height="40" rx="9" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="10" y="-46" width="18" height="23" rx="5" fill="#526E86"/>${win(-24,-45,12,16)}${win(-7,-45,12,16)}<path d="M-29 -20 H30" stroke="${a}" stroke-width="5"/><circle cx="25" cy="-17" r="3" fill="#FFF0B5"/>`;break;
+      case 'tram':
+        art=`<rect x="-30" y="-50" width="61" height="37" rx="5" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-34 -51 H34 M-6 -53 L3 -66 13 -54 M-2 -67 H19" fill="none" stroke="#647C90" stroke-width="3" stroke-linecap="round"/><path d="M-29 -22 H30" stroke="${a}" stroke-width="7"/>${win(-25,-43,12,16)}${win(-8,-43,12,16)}${win(10,-43,15,16)}`;break;
+      case 'diesel':
+        art=`<path d="M-29 -13 V-43 H-12 V-55 H12 L24 -42 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="-31" y="-34" width="18" height="21" rx="3" fill="${a}"/><path d="M-11 -55 H13 L27 -42" fill="none" stroke="${stroke}" stroke-width="3"/>${win(-6,-49,14,15)}<path d="M12 -49 L20 -41 V-34 H12Z" fill="#DDF3F8"/><path d="M-24 -29 v11 M-18 -29 v11 M-10 -21 H24" stroke="#8A805E" stroke-width="3"/>`;break;
+      default:
+        art=`<rect x="-29" y="-59" width="28" height="46" rx="8" fill="${c}" stroke="${stroke}" stroke-width="2"/>${win(-23,-51,16,18)}<path d="M-34 -60 Q-15 -71 5 -60Z" fill="${a}" stroke="${stroke}" stroke-width="2"/><rect x="-4" y="-37" width="35" height="24" rx="10" fill="${a}" stroke="${stroke}" stroke-width="2"/><path d="M14 -39 V-54 H24 V-39" fill="#EBC76D" stroke="${stroke}" stroke-width="2"/><circle cx="30" cy="-25" r="6" fill="#FFF0B5"/>`;
+    }
+    return art+trainWheels(t.id==='steam'||t.id==='toy');
+  }
+  function trainCarriage(t,icon='',i=0){
+    const c=t.id==='toy'?['#EAA8BD','#97BBD8','#EBC76D','#96C8AD'][i%4]:t.color;
+    let art='';
+    if(t.id==='goods'){
+      art=`<path d="M-30 -12 H30" stroke="#6F7C87" stroke-width="5"/><rect x="-26" y="-52" width="52" height="38" rx="3" fill="${i%2?t.accent:c}" stroke="#96745C" stroke-width="2"/><path d="M-21 -47 H21 M-21 -20 H21 M-18 -47 v27 M18 -47 v27" stroke="#B5896E" stroke-width="2"/>`;
+    }else if(t.id==='steam'){
+      art=`<rect x="-27" y="-48" width="54" height="35" rx="5" fill="${t.accent}" stroke="#7F8C7D" stroke-width="2"/><path d="M-31 -49 Q0 -61 31 -49" fill="${c}" stroke="#5C7685" stroke-width="3"/>`;
+    }else{
+      art=`<rect x="-28" y="-52" width="56" height="39" rx="${t.id==='bullet'?12:7}" fill="${c}" stroke="#5C7685" stroke-width="2"/><path d="M-27 -22 H27" stroke="${t.accent}" stroke-width="5"/><rect x="-23" y="-45" width="13" height="16" rx="3" fill="#DDF3F8"/><rect x="10" y="-45" width="13" height="16" rx="3" fill="#DDF3F8"/>`;
+    }
+    // Task badge remains prominent on every vehicle type, including freight wagons.
+    const badge=icon?`<rect x="-18" y="-49" width="36" height="34" rx="7" fill="#FFFBEE" fill-opacity=".95"/><svg x="-16" y="-48" width="32" height="32">${icon}</svg>`:'';
+    return `<path d="M-34 -13 H34" stroke="#596B80" stroke-width="3"/>${art}${badge}${trainWheels(t.id==='toy')}`;
+  }
+  function renderTrainPicker(){
+    $('#train-options').hidden=settings.version!=='train';
+    $('#train-pick-label').textContent=settings.lang==='sv'?'Dagens tåg':'Today’s train';
+    document.querySelectorAll('[data-train]').forEach(b=>{
+      const type=TRAINS.find(t=>t.id===b.dataset.train);b.setAttribute('aria-pressed',String(type.id===selectedTrain().id));
+      b.querySelector('small').textContent=type[settings.lang];b.setAttribute('aria-label',type[settings.lang]);
+    });
+  }
+  TRAINS.forEach(t=>{
+    const b=document.createElement('button');b.type='button';b.dataset.train=t.id;
+    b.innerHTML=`<svg viewBox="-73 -78 150 90" aria-hidden="true"><g transform="translate(-36 0) scale(.85)">${trainCarriage(t)}</g><g transform="translate(34 0) scale(.85)">${trainEngine(t)}</g></svg><small></small>`;
+    b.addEventListener('click',()=>{if(busy)return;day.trainType=t.id;save('mf_day',day);renderTrain();SFX.click();});
+    $('#train-picker').appendChild(b);
+  });
   let trainMoving = false;
   function renderTrain(){
+    renderCar();
+    renderTrainPicker();
     const active = settings.version === 'train';
     document.body.classList.toggle('train-version', active);
     $('#train-caption').hidden = !active;
     if (!active || trainMoving) return;
     const items = steps(), completed = items.filter(s=>doneList().includes(s.id));
+    const train=selectedTrain();
     const gap = Math.min(62, 380 / Math.max(1,items.length));
     const size = Math.min(1, gap/62);
-    const wheels = '<circle cx="-16" cy="-3" r="7" fill="#344566"/><circle cx="16" cy="-3" r="7" fill="#344566"/><circle cx="-16" cy="-3" r="3" fill="#D7E5EF"/><circle cx="16" cy="-3" r="3" fill="#D7E5EF"/>';
     let out = `<svg viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg"><path id="train-route" d="${trainPath}" fill="none" stroke="#A68C70" stroke-width="13" stroke-dasharray="4 9"/><path d="${trainPath}" fill="none" stroke="#667B91" stroke-width="5"/><path d="${trainPath}" fill="none" stroke="#D9E6EE" stroke-width="2"/>`;
     out += `<g transform="translate(105 128)" aria-hidden="true">
       <ellipse cx="65" cy="40" rx="72" ry="5" fill="#344566" opacity=".12"/>
@@ -1442,12 +1697,12 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
     // Empty coupling markers show how many carriages remain to be built.
     items.forEach((s,i)=>{ out += `<circle cx="${132+(i+1)*gap}" cy="110" r="5" fill="#FFF2CD" opacity=".7"/>`; });
     completed.forEach((s,i)=>{
-      out += `<g class="train-vehicle" data-offset="${(i+1)*gap}" transform="translate(${132+(i+1)*gap} 110)"><g transform="scale(${size})"><path d="M-33 -14 H33" stroke="#596B80" stroke-width="4"/><rect x="-26" y="-52" width="52" height="44" rx="9" fill="${trainColors[i%8]}" stroke="#556787" stroke-width="2"/><svg x="-20" y="-52" width="40" height="40">${s.icon}</svg>${wheels}</g></g>`;
+      out += `<g class="train-vehicle" data-offset="${(i+1)*gap}" transform="translate(${132+(i+1)*gap} 110)"><g transform="scale(${size})">${trainCarriage(train,s.icon,i)}</g></g>`;
     });
-    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})"><rect x="-29" y="-62" width="30" height="51" rx="6" fill="#63BFA8" stroke="#426D75" stroke-width="2"/><rect x="-24" y="-56" width="20" height="20" rx="4" fill="#E8F8FF"/><rect x="-3" y="-40" width="33" height="29" rx="8" fill="#F1A44F"/><path d="M-34 -63 H6 M17 -42 V-59 H29 V-42" fill="#637994" stroke="#426078" stroke-width="5" stroke-linejoin="round"/><path d="M29 -17 L39 -8 H25" fill="#E88470"/>${wheels}<circle cx="29" cy="-28" r="4" fill="#FFF2CD"/></g></g></svg>`;
+    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})">${trainEngine(train)}</g></g></svg>`;
     $('#train-scene').innerHTML = out;
-    $('#train-scene').setAttribute('aria-label', (settings.lang==='sv'?'Tåg':'Train')+`: ${completed.length} / ${items.length}`);
-    $('#train-caption').textContent = settings.lang==='sv' ? `${completed.length} av ${items.length} vagnar klara` : `${completed.length} of ${items.length} carriages ready`;
+    $('#train-scene').setAttribute('aria-label', train[settings.lang]+`: ${completed.length} / ${items.length}`);
+    $('#train-caption').textContent = settings.lang==='sv' ? `${train.sv} · ${completed.length} av ${items.length} vagnar klara` : `${train.en} · ${completed.length} of ${items.length} carriages ready`;
   }
   function trainStep(i, cb){
     const source = document.querySelectorAll('.step .knob')[i];
@@ -1532,7 +1787,15 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
       const remaining = steps().filter(x => !doneList().includes(x.id));
       if (!remaining.length) (isNight() ? nightFinale : finale)();
     };
-    if (settings.version === 'train'){
+    if (settings.version === 'car'){
+      if(isAdhoc()){day.adhocDoneAt[s.id]=Date.now();save('mf_day',day);}
+      carStep(i,()=>{
+        if(steps().length && steps().every(x=>doneList().includes(x.id))){
+          carDrive(()=>{busy=false;SFX.fanfare();confetti();if(!isAdhoc())$('#finale').hidden=false;});
+        }else busy=false;
+      });
+    }
+    else if (settings.version === 'train'){
       if(isAdhoc()){ day.adhocDoneAt[s.id]=Date.now(); save('mf_day',day); }
       trainStep(i,()=>{
         if(steps().length && steps().every(x=>doneList().includes(x.id))){ trainLap(()=>{ busy=false; if(!isAdhoc()){ $('#finale').hidden=false; SFX.fanfare(); confetti(); } }); }
@@ -1709,11 +1972,42 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
 
   setInterval(expireAdhoc, 5000);
 
+  /* ---------- Offline installation ---------- */
+  let offlineState = 'checking';
+  function renderOfflineStatus(){
+    const sv = settings.lang === 'sv';
+    const messages = {
+      checking: sv ? 'Förbereder offlineanvändning…' : 'Preparing offline access…',
+      ready: sv ? 'Redo att användas offline på den här enheten ✓' : 'Ready to use offline on this device ✓',
+      unavailable: sv ? 'Öppna den publicerade länken online för att aktivera offlineanvändning.' : 'Open the hosted link online to enable offline access.',
+      failed: sv ? 'Offlinekopian är inte klar. Öppna appen igen med internetanslutning.' : 'Offline copy is not ready. Reopen the app with an internet connection.'
+    };
+    $('#offline-status').textContent = messages[offlineState];
+  }
+  async function prepareOffline(){
+    if (!('serviceWorker' in navigator) || !window.isSecureContext || !/^https?:$/.test(location.protocol)){
+      offlineState = 'unavailable'; renderOfflineStatus(); return;
+    }
+    try {
+      await navigator.serviceWorker.register('./sw.js', {scope:'./', updateViaCache:'none'});
+      const registration = await navigator.serviceWorker.ready;
+      const reply = await new Promise((resolve,reject)=>{
+        const channel = new MessageChannel();
+        const timer = setTimeout(()=>reject(new Error('Offline check timed out')), 10000);
+        channel.port1.onmessage = e=>{ clearTimeout(timer); channel.port1.close(); resolve(e.data); };
+        registration.active.postMessage({type:'CHECK_OFFLINE'},[channel.port2]);
+      });
+      offlineState = reply.ready ? 'ready' : 'failed';
+    } catch(e){ offlineState = 'failed'; }
+    renderOfflineStatus();
+  }
+
   /* ---------- Boot ---------- */
   buildTown(); buildTiles(); buildSkyline(); renderAnimal(); expireAdhoc();
   document.body.classList.toggle('night', isNight());
   buildSteps(); renderProgress(); renderTown();
   $('#sound').textContent = settings.sound ? '🔊' : '🔇';
+  prepareOffline();
 })();
 </script>
 </body>
