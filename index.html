@@ -781,7 +781,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       ids[r]=ROUTINES[r].steps.map(st=>st.id);
     });
   }
-  const ADHOC_MAX = 3;            // armed tasks at a time
+  const ADHOC_MAX = 4;            // armed tasks at a time
   const ADHOC_DONE_MS = 600000;   // a finished task clears itself after 10 minutes
   const LAUNCH_MS = 10000;
   const ANIM_MS = {spin:5000, jump:5000, roll:5000, rollback:5000, grow:5000, dance:5000, flip:5000, exit:5000, hello:900};
@@ -798,7 +798,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       allDoneNight:'Good night!', allDoneNightSub:'The whole town is asleep. Sleep tight.', bannerNight:'Everyone is asleep — good night 🌙',
       hold:'Keep holding…', soundOn:'Sound on', soundOff:'Sound off', modeMorning:'Morning routine', modeNight:'Night routine',
       undoHint:'Hold and drag left to undo. With a keyboard, press twice.', slideBack:'← Slide back to undo', undoKey:'Press again to undo',
-      greetAdhoc:"Let's do it!", modeAdhoc:'Any time', tilesHint:'Grown-ups: hold a task to add it (3 at a time)', maxToast:'3 tasks at a time',
+      greetAdhoc:"Let's do it!", modeAdhoc:'Any time', tilesHint:`Grown-ups: hold a task to add it (${ADHOC_MAX} at a time)`, maxToast:`${ADHOC_MAX} tasks at a time`,
       awayBtn:'Friend went away', backBtn:'Bring friend back', awayTag:(a)=>`${a} went away…`,
       editTitle:'Edit routines', editMorning:'Morning', editNight:'Night', addTask:'Add a task to the end:', maxTasks:'Max', minTask:'Keep at least one task', steps:'steps',
     },
@@ -810,7 +810,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       allDoneNight:'God natt!', allDoneNightSub:'Hela staden sover. Sov gott.', bannerNight:'Alla sover — god natt 🌙',
       hold:'Håll kvar…', soundOn:'Ljud på', soundOff:'Ljud av', modeMorning:'Morgonrutin', modeNight:'Kvällsrutin',
       undoHint:'Håll och dra åt vänster för att ångra. Med tangentbord, tryck två gånger.', slideBack:'← Dra tillbaka för att ångra', undoKey:'Tryck igen för att ångra',
-      greetAdhoc:'Nu kör vi!', modeAdhoc:'När som helst', tilesHint:'Vuxna: håll en uppgift för att lägga till (3 åt gången)', maxToast:'3 uppgifter åt gången',
+      greetAdhoc:'Nu kör vi!', modeAdhoc:'När som helst', tilesHint:`Vuxna: håll en uppgift för att lägga till (${ADHOC_MAX} åt gången)`, maxToast:`${ADHOC_MAX} uppgifter åt gången`,
       awayBtn:'Kompisen gick sin väg', backBtn:'Hämta tillbaka kompisen', awayTag:(a)=>`${a} gick sin väg…`,
       editTitle:'Ändra rutiner', editMorning:'Morgon', editNight:'Kväll', addTask:'Lägg till en uppgift sist:', maxTasks:'Max', minTask:'Behåll minst en uppgift', steps:'steg',
     }
