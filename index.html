@@ -256,8 +256,10 @@
   }
   .knob svg{width:38px;height:38px;display:block}
   .knob:active{cursor:grabbing}
-  .step.done .knob{background:var(--done);border-color:var(--grass-dark)}
+  .step.done .knob{background:var(--done);border-color:var(--grass-dark);pointer-events:auto}
   .step.done .track{pointer-events:none}
+  .knob.undo-holding{box-shadow:0 0 0 3px var(--sun),0 4px 12px rgba(34,51,90,.22)}
+  .step.undo-ready .knob{border-color:var(--sun);box-shadow:0 0 0 3px var(--sun)}
 
   .banner{
     background:var(--done);color:#0F3D26;border-radius:22px;padding:16px 18px;text-align:center;
@@ -501,7 +503,7 @@
   #flash.on{opacity:.85}
 
 /* Train version shares the routine data and sliders with the animal version. */
-#train-scene{display:none;position:absolute;inset:70px 10px 32px;z-index:2}
+#train-scene{display:none;position:absolute;inset:40px 10px 68px;z-index:2}
 #train-scene svg{width:100%;height:100%;overflow:visible}
 body.train-version #train-scene{display:block}
 /* Fade scenery toward the scene background while keeping the train and controls crisp. */
@@ -521,7 +523,7 @@ body.train-version.asleep #stage{filter:none}
 body.train-version #away,body.train-version #return,body.train-version #pick-label,body.train-version #animal-picker{display:none}
 #train-caption{position:absolute;bottom:9px;left:0;right:0;text-align:center;font-family:Fredoka,sans-serif;font-size:15px;color:var(--ink)}
 .train-flying-icon{position:fixed;width:48px;height:48px;z-index:30;pointer-events:none}
-@media(min-width:820px) and (orientation:landscape){#train-scene{inset:90px 12px 45px}}
+@media(min-width:820px) and (orientation:landscape){#train-scene{inset:72px 12px 63px}}
 </style>
 
 <style>
@@ -795,6 +797,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       allDone:'All done!', allDoneSub:'What a great morning. Tap to close.', banner:'All done for today ⭐',
       allDoneNight:'Good night!', allDoneNightSub:'The whole town is asleep. Sleep tight.', bannerNight:'Everyone is asleep — good night 🌙',
       hold:'Keep holding…', soundOn:'Sound on', soundOff:'Sound off', modeMorning:'Morning routine', modeNight:'Night routine',
+      undoHint:'Hold and drag left to undo. With a keyboard, press twice.', slideBack:'← Slide back to undo', undoKey:'Press again to undo',
       greetAdhoc:"Let's do it!", modeAdhoc:'Any time', tilesHint:'Grown-ups: hold a task to add it (3 at a time)', maxToast:'3 tasks at a time',
       awayBtn:'Friend went away', backBtn:'Bring friend back', awayTag:(a)=>`${a} went away…`,
       editTitle:'Edit routines', editMorning:'Morning', editNight:'Night', addTask:'Add a task to the end:', maxTasks:'Max', minTask:'Keep at least one task', steps:'steps',
@@ -806,6 +809,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       allDone:'Allt klart!', allDoneSub:'Vilken fin morgon. Tryck för att stänga.', banner:'Allt klart för idag ⭐',
       allDoneNight:'God natt!', allDoneNightSub:'Hela staden sover. Sov gott.', bannerNight:'Alla sover — god natt 🌙',
       hold:'Håll kvar…', soundOn:'Ljud på', soundOff:'Ljud av', modeMorning:'Morgonrutin', modeNight:'Kvällsrutin',
+      undoHint:'Håll och dra åt vänster för att ångra. Med tangentbord, tryck två gånger.', slideBack:'← Dra tillbaka för att ångra', undoKey:'Tryck igen för att ångra',
       greetAdhoc:'Nu kör vi!', modeAdhoc:'När som helst', tilesHint:'Vuxna: håll en uppgift för att lägga till (3 åt gången)', maxToast:'3 uppgifter åt gången',
       awayBtn:'Kompisen gick sin väg', backBtn:'Hämta tillbaka kompisen', awayTag:(a)=>`${a} gick sin väg…`,
       editTitle:'Ändra rutiner', editMorning:'Morgon', editNight:'Kväll', addTask:'Lägg till en uppgift sist:', maxTasks:'Max', minTask:'Behåll minst en uppgift', steps:'steg',
@@ -1340,16 +1344,16 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     $('#lang-sv').setAttribute('aria-pressed', String(settings.lang==='sv'));
     $('#mode-morning').setAttribute('aria-pressed', String(mode==='morning')); $('#mode-morning').setAttribute('aria-label', s.modeMorning);
     $('#mode-night').setAttribute('aria-pressed', String(night)); $('#mode-night').setAttribute('aria-label', s.modeNight);
-    document.querySelectorAll('.step').forEach((el,i)=>{
-      el.querySelector('.step-name button').textContent = stepName(steps()[i]);
-      const done = doneList().includes(steps()[i].id);
-      const knob=el.querySelector('.knob');
-      knob.setAttribute('aria-label',stepName(steps()[i])+' — '+(done?s.done:s.slide));
-      knob.setAttribute('aria-pressed',String(done));
-      knob.setAttribute('aria-disabled',String(done||busy));
-      el.querySelector('.hint').textContent = done ? s.done : s.slide;
-      el.querySelector('.step-do').textContent = done ? '✓' : '';
-    });
+    document.querySelectorAll('.step').forEach((el,i)=>renderSliderText(el,steps()[i]));
+  }
+  function renderSliderText(el,task){
+    if(!task)return;
+    const s=t(),done=doneList().includes(task.id),knob=el.querySelector('.knob');
+    const hint=done?(el.classList.contains('undo-keyboard')?s.undoKey:el.classList.contains('undo-ready')?s.slideBack:knob.classList.contains('undo-holding')?s.hold:s.done):s.slide;
+    el.querySelector('.step-name button').textContent=stepName(task);
+    knob.setAttribute('aria-label',stepName(task)+' — '+(done?hint+' '+s.undoHint:s.slide));
+    knob.setAttribute('aria-pressed',String(done));knob.setAttribute('aria-disabled',String(busy));
+    el.querySelector('.hint').textContent=hint;el.querySelector('.step-do').textContent=done?'✓':'';
   }
   function buildSteps(){
     const host = $('#steps'); host.innerHTML = '';
@@ -1506,27 +1510,61 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   /* ---------- Slider ---------- */
   function attachSlider(el, i){
     const track = el.querySelector('.track'), knob = el.querySelector('.knob'), fill = el.querySelector('.fill');
-    let startX = 0, dx = 0, max = 0, active = false;
-    const setPos = x => { knob.style.transform = `translateX(${x}px)`; fill.style.width = (x + knob.offsetWidth/2 + 5) + 'px'; knob.dataset.progress=String(max>0?Math.round(x/max*100):0); };
+    const task=steps()[i],id=task.id;
+    let max=0,drag=null,holdTimer=null,keyReady=null;
+    const setPos = x => { knob.style.transform = `translateX(${x}px)`; fill.style.width = x>0?(x + knob.offsetWidth/2 + 5)+'px':'0'; knob.dataset.progress=String(max>0?Math.round(x/max*100):0); };
+    const valid = g => knob.isConnected&&!busy&&$('#sheet').hidden&&mode===g.mode&&day.date===g.date&&todayKey()===g.date&&steps().some(s=>s.id===id);
+    const reset = () => {
+      const old=drag;drag=null;keyReady=null;clearTimeout(holdTimer);
+      knob.classList.remove('undo-holding');el.classList.remove('undo-ready','undo-keyboard');
+      if(old&&knob.hasPointerCapture(old.pointerId))knob.releasePointerCapture(old.pointerId);
+      if(!knob.isConnected)return;
+      max=Math.max(0,track.clientWidth-knob.offsetWidth-10);
+      knob.style.transition='transform .35s cubic-bezier(.2,1.2,.4,1)';fill.style.transition='width .35s';
+      const done=el.classList.contains('done');setPos(done?max:0);fill.style.width=done?'100%':'0';renderSliderText(el,task);
+    };
     knob.addEventListener('pointerdown', e => {
-      if (el.classList.contains('done') || busy) return;
-      active = true; startX = e.clientX; dx = 0;
-      max = track.clientWidth - knob.offsetWidth - 10;
+      if(busy||!$('#sheet').hidden||!e.isPrimary||e.button!==0||drag)return;
+      reset();const undo=el.classList.contains('done');
+      drag={pointerId:e.pointerId,mode,date:day.date,undo,unlocked:!undo,startX:e.clientX,startY:e.clientY,lastX:e.clientX,x:undo?max:0};
       knob.style.transition = 'none'; fill.style.transition = 'none';
       knob.setPointerCapture(e.pointerId); e.preventDefault();
+      if(undo){
+        knob.classList.add('undo-holding');renderSliderText(el,task);
+        const gesture=drag;
+        holdTimer=setTimeout(()=>{
+          if(drag!==gesture||!valid(gesture)||!doneList().includes(id)){reset();return;}
+          gesture.unlocked=true;gesture.startX=gesture.lastX;
+          knob.classList.remove('undo-holding');el.classList.add('undo-ready');renderSliderText(el,task);SFX.click();
+        },1000);
+      }
     });
     knob.addEventListener('pointermove', e => {
-      if (!active) return;
-      dx = Math.min(Math.max(e.clientX - startX, 0), max); setPos(dx);
+      if(!drag||e.pointerId!==drag.pointerId)return;
+      if(!valid(drag)){reset();return;}
+      drag.lastX=e.clientX;
+      if(!drag.unlocked){
+        if(Math.abs(e.clientX-drag.startX)>10||Math.abs(e.clientY-drag.startY)>10)reset();
+        return;
+      }
+      drag.x=Math.min(Math.max((drag.undo?max:0)+e.clientX-drag.startX,0),max);setPos(drag.x);
     });
-    const end = e => {
-      if (!active) return; active = false;
-      try { knob.releasePointerCapture(e.pointerId); } catch(_){}
-      if (dx / max >= 0.72){ setPos(max); complete(i); }
-      else { knob.style.transition = 'transform .35s cubic-bezier(.2,1.2,.4,1)'; fill.style.transition = 'width .35s'; setPos(0); }
-    };
-    knob.addEventListener('pointerup', end); knob.addEventListener('pointercancel', end);
-    knob.addEventListener('keydown', e => { if ((e.key==='Enter' || e.key===' ') && !el.classList.contains('done') && !busy){ e.preventDefault(); max = track.clientWidth - knob.offsetWidth - 10; setPos(max); complete(i); } });
+    knob.addEventListener('pointerup', e => {
+      if(!drag||e.pointerId!==drag.pointerId)return;
+      const g=drag,commit=valid(g)&&g.unlocked&&max>0&&(g.undo?g.x/max<=.28:g.x/max>=.72);
+      reset();if(commit){if(g.undo)undoTask(id,g.mode,g.date);else complete(i);}
+    });
+    ['pointercancel','lostpointercapture'].forEach(type=>knob.addEventListener(type,e=>{if(drag?.pointerId===e.pointerId)reset();}));
+    knob.addEventListener('contextmenu',e=>e.preventDefault());
+    knob.addEventListener('blur',()=>{if(drag||keyReady)reset();});
+    knob.addEventListener('keydown', e => {
+      if(e.key==='Escape'){reset();return;}
+      if((e.key!=='Enter'&&e.key!==' ')||busy||!$('#sheet').hidden)return;
+      e.preventDefault();if(e.repeat||drag)return;
+      if(!el.classList.contains('done')){complete(i);return;}
+      if(keyReady){const g=keyReady;reset();if(valid(g))undoTask(id,g.mode,g.date);}
+      else{keyReady={mode,date:day.date};el.classList.add('undo-ready','undo-keyboard');renderSliderText(el,task);}
+    });
   }
 
   /* ---------- Build-a-car adventure ---------- */
@@ -1609,7 +1647,13 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const items=steps(),completed=items.filter(s=>doneList().includes(s.id));
     const built=items.length?Math.floor(completed.length*8/items.length):0,c=selectedCar();
     let out=`<svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg"><g id="car-road" opacity=".35"><path id="car-course" d="${carCourse}" fill="none" stroke="#BDCFBD" stroke-width="40" stroke-linejoin="round"/><path d="${carCourse}" fill="none" stroke="#71888E" stroke-width="30"/><path d="${carCourse}" fill="none" stroke="#F8F5DB" stroke-width="2" stroke-dasharray="8 10"/><path d="M103 203 V227 M109 203 V227 M115 203 V227" stroke="#F9F9E8" stroke-width="4"/></g>`;
-    out+='<g id="car-workshop"><rect x="185" y="111" width="230" height="110" rx="26" fill="#F9F7EB" fill-opacity=".9" stroke="#AEC3BB" stroke-width="2" stroke-dasharray="7 6"/><path d="M202 120 h22 M202 120 v22 M398 212 h-22 M398 212 v-22" fill="none" stroke="#A6BEB5" stroke-width="3"/></g>';
+    out+=`<g id="car-workshop">
+      <rect x="185" y="95" width="230" height="126" rx="18" fill="#F9F7EB" fill-opacity=".95" stroke="#AEC3BB" stroke-width="2"/>
+      <path id="car-workshop-roof" d="M174 98 L300 48 L426 98Z" fill="#C4C7C4" stroke="#A4AAA6" stroke-width="3" stroke-linejoin="round"/>
+      <path d="M208 85 H392 M240 72 H360 M272 59 H328" stroke="#D9DCD8" stroke-width="3" stroke-linecap="round"/>
+      <path d="M183 99 H417" stroke="#A4AAA6" stroke-width="6" stroke-linecap="round"/>
+      <path d="M202 120 h22 M202 120 v22 M398 212 h-22 M398 212 v-22" fill="none" stroke="#A6BEB5" stroke-width="3"/>
+    </g>`;
     out+=`<g id="car-vehicle" transform="translate(300 166)"><g id="car-art" transform="scale(1.3)">${carArt(c,built)}</g></g>`;
     items.forEach((task,i)=>{const x=300+(i-(items.length-1)/2)*39,done=doneList().includes(task.id);out+=`<g transform="translate(${x} 288)"><circle r="16" fill="${done?'#FFF8DE':'#FFFFFF'}" fill-opacity="${done?1:.3}" stroke="${done?'#69AE92':'#A9C2B8'}" stroke-width="2"/>${done?`<svg x="-12" y="-12" width="24" height="24">${task.icon}</svg>`:''}</g>`;});
     out+='</svg>';$('#car-scene').innerHTML=out;
@@ -1666,6 +1710,38 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
 
   /* ---------- Train adventure ---------- */
   const trainPath = 'M70 225 H530 Q570 225 570 185 V150 Q570 110 530 110 H70 Q30 110 30 150 V185 Q30 225 70 225';
+  const TRAIN_BOTTOM = {left:70,right:530,y:225};
+  const TRAIN_LAPS = 2, TRAIN_LAP_MS = 4800;
+  function trainTunnel(){
+    const length=(TRAIN_BOTTOM.right-TRAIN_BOTTOM.left)/3;
+    const right=TRAIN_BOTTOM.right-10,left=right-length;
+    // Foreground scenery covers the engine and each wagon as they pass beneath it.
+    // Keep its length at one third of the lower straight, near the right bend.
+    const roof=`M${left} 201 H${right} Q${right-22} 251 ${right} 301 H${left} Q${left+22} 251 ${left} 201Z`;
+    // Brick courses compress near the edges to suggest a rounded roof.
+    const courses=[201,208,219,234,251,268,283,294,301];
+    let mortar='';
+    courses.slice(1,-1).forEach(y=>mortar+=`<path d="M${left} ${y} H${right}"/>`);
+    courses.slice(0,-1).forEach((y,row)=>{
+      for(let x=left+(row%2?16:32);x<right;x+=32)
+        mortar+=`<path d="M${x} ${y} V${courses[row+1]}"/>`;
+    });
+    return `<g id="train-tunnel" aria-hidden="true" opacity=".84" data-length="${length}" data-left="${left}" data-right="${right}">
+      <defs>
+        <linearGradient id="tunnel-roof-shade" x1="0" y1="0" x2="0" y2="1">
+          <stop stop-color="#A5ADB3"/><stop offset=".25" stop-color="#D9DDE0"/>
+          <stop offset=".5" stop-color="#EEF0F1"/><stop offset=".75" stop-color="#D5DADD"/><stop offset="1" stop-color="#9DA6AD"/>
+        </linearGradient>
+        <clipPath id="tunnel-roof-clip"><path d="${roof}"/></clipPath>
+      </defs>
+      <ellipse class="tunnel-opening" cx="${left+5}" cy="251" rx="12" ry="49" fill="none" stroke="#B8C0C6" stroke-width="3"/>
+      <ellipse class="tunnel-opening" cx="${right-5}" cy="251" rx="12" ry="49" fill="none" stroke="#B8C0C6" stroke-width="3"/>
+      <path d="${roof}" fill="url(#tunnel-roof-shade)"/>
+      <g clip-path="url(#tunnel-roof-clip)" fill="none" stroke="#929EA7" stroke-width="1.3" opacity=".65">${mortar}</g>
+      <path d="M${left+4} 204 H${right-4}" stroke="#E6EAED" stroke-width="2" stroke-linecap="round"/>
+    </g>`;
+  }
+
   const selectedTrain=()=>TRAINS.find(t=>t.id===day.trainType)||TRAINS[dayIndex()%TRAINS.length];
   function trainWheels(big=false){
     const r=big?9:7;
@@ -1765,7 +1841,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     completed.forEach((s,i)=>{
       out += `<g class="train-vehicle" data-offset="${(i+1)*gap}" transform="translate(${132+(i+1)*gap} 110)"><g transform="scale(${size})">${trainCarriage(train,s.icon,i)}</g></g>`;
     });
-    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})">${trainEngine(train)}</g></g></svg>`;
+    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})">${trainEngine(train)}</g></g>${trainTunnel()}</svg>`;
     $('#train-scene').innerHTML = out;
     $('#train-scene').setAttribute('aria-label', train[settings.lang]+`: ${completed.length} / ${items.length}`);
     $('#train-caption').textContent = settings.lang==='sv' ? `${train.sv} · ${completed.length} av ${items.length} vagnar klara` : `${train.en} · ${completed.length} of ${items.length} carriages ready`;
@@ -1820,7 +1896,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const t0=performance.now();
     tone(880,.45,{type:'sine',vol:.12,to:1046}); tone(1046,.5,{type:'sine',vol:.12,when:.5});
     function frame(now){
-      const u=Math.min(1,(now-t0)/4800), distance=start+length*(u*u*(3-2*u));
+      const u=Math.min(1,(now-t0)/(TRAIN_LAPS*TRAIN_LAP_MS)), distance=start+length*TRAIN_LAPS*(u*u*(3-2*u));
       vehicles.forEach(v=>{
         const d=((distance-Number(v.dataset.offset))%length+length)%length;
         const p=path.getPointAtLength(d), q=path.getPointAtLength((d+.5)%length);
@@ -1836,6 +1912,12 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   document.querySelectorAll('[data-version]').forEach(b=>b.addEventListener('click',()=>mutate(()=>{settings.version=b.dataset.version;save('mf_settings',settings);$('#finale').hidden=true;renderProgress();SFX.click();})));
 
   /* ---------- Actions ---------- */
+  function undoTask(id,expectedMode,expectedDate){return mutate(()=>{
+    if(mode!==expectedMode||day.date!==expectedDate||!steps().some(s=>s.id===id))return;
+    const list=doneList(),index=list.indexOf(id);if(index<0)return;
+    list.splice(index,1);if(isAdhoc())delete day.adhocDoneAt[id];
+    save('mf_day',day);$('#finale').hidden=true;renderProgress();renderTown();SFX.click();
+  });}
   let animalAnimationTimer=null;
   function playAnim(name, cb, sfx){
     clearTimeout(animalAnimationTimer);
@@ -1869,13 +1951,13 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       releaseBusy();
       if(actionDate===todayKey()&&allDone())(isNight()?nightFinale:finale)();
     };
-    const afterVehicleStep=(drive,celebrateAnytime)=>{
+    const afterVehicleStep=drive=>{
       if(!currentDay())return;
       if(!allDone()){releaseBusy();return;}
-      drive(()=>{if(isAdhoc()&&!celebrateAnytime)releaseBusy();else celebrate();});
+      drive(celebrate);
     };
-    if(settings.version==='car')carStep(i,()=>afterVehicleStep(carDrive,true));
-    else if(settings.version==='train')trainStep(i,()=>afterVehicleStep(trainLap,false));
+    if(settings.version==='car')carStep(i,()=>afterVehicleStep(carDrive));
+    else if(settings.version==='train')trainStep(i,()=>afterVehicleStep(trainLap));
     else if(isAdhoc()){if(isAway())fireworksOnly(releaseBusy);else launchStep(releaseBusy);}
     else if(isNight())heroStep(i,after);
     else if(isAway()){SFX.click();[N.C5,N.E5].forEach((f,k)=>tone(f,.25,{when:k*.12,vol:.14}));setTimeout(after,900);}
