@@ -237,6 +237,11 @@
   .step-name button{text-align:left;font:inherit}
   .step-do{font-size:13px;color:var(--muted);font-weight:800;letter-spacing:.02em}
   .step.done .step-do{color:var(--grass-dark)}
+  .step-actions{display:none;gap:6px}
+  body.adhoc .step-actions{display:flex}
+  .step-actions button{width:32px;height:32px;border:2px solid var(--border);border-radius:50%;font-size:20px;line-height:1;color:var(--muted);touch-action:none}
+  .step-actions button.holding{border-color:var(--sun);background:var(--sun-soft)}
+  .step-actions button:disabled{opacity:.35;cursor:default}
 
   .track{
     position:relative;height:66px;border-radius:999px;background:var(--track);overflow:hidden;touch-action:pan-y;
@@ -444,6 +449,7 @@
   }
   .tile svg{width:min(9vw,44px);height:min(9vw,44px);display:block}
   .tile small{font-size:10px;font-weight:800;color:var(--muted);letter-spacing:.02em;line-height:1;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  .tile .count{position:absolute;top:3px;left:5px;font-size:11px;font-weight:900;color:var(--ink)}
   .tile .ring{position:absolute;inset:-2px;border-radius:18px;border:3px solid var(--sun);clip-path:inset(0 100% 0 0);pointer-events:none}
   .tile.holding .ring{clip-path:inset(0 0 0 0);transition:clip-path .6s linear}
   .tile.armed{border-color:var(--sun);background:var(--sun-soft)}
@@ -751,7 +757,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     {id:'toy',en:'Toy train',sv:'Leksakståg',color:'#F43F9C',accent:'#FFD128'}
   ];
   const DEFAULT_ROUTINES = { morning:['pee','teeth','water','food','water','poop'], night:['food','water','pee','teeth'] };
-  const ROUTINE_MAX = { morning:8, night:6 };
+  const ROUTINE_MAX = { morning:10, night:10 };
   // Morning animations are handed out by position so a routine of any length stays varied
   const MORNING_ANIMS = ['spin','jump','roll','grow','rollback','exit','dance','flip'];
   const ROUTINES = {
@@ -781,8 +787,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       ids[r]=ROUTINES[r].steps.map(st=>st.id);
     });
   }
-  const ADHOC_MAX = 4;            // armed tasks at a time
-  const ADHOC_DONE_MS = 600000;   // a finished task clears itself after 10 minutes
+  const ADHOC_MAX = 10;           // armed tasks at a time
+  const ADHOC_CLEAR_MS = 300000;  // clear the whole routine five minutes after celebration
   const LAUNCH_MS = 10000;
   const ANIM_MS = {spin:5000, jump:5000, roll:5000, rollback:5000, grow:5000, dance:5000, flip:5000, exit:5000, hello:900};
   const STUNT_MS = 5600;   // fly to roof, four jumps, fly home
@@ -798,7 +804,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       allDoneNight:'Good night!', allDoneNightSub:'The whole town is asleep. Sleep tight.', bannerNight:'Everyone is asleep — good night 🌙',
       hold:'Keep holding…', soundOn:'Sound on', soundOff:'Sound off', modeMorning:'Morning routine', modeNight:'Night routine',
       undoHint:'Hold and drag left to undo. With a keyboard, press twice.', slideBack:'← Slide back to undo', undoKey:'Press again to undo',
-      greetAdhoc:"Let's do it!", modeAdhoc:'Any time', tilesHint:`Grown-ups: hold a task to add it (${ADHOC_MAX} at a time)`, maxToast:`${ADHOC_MAX} tasks at a time`,
+      greetAdhoc:"Let's do it!", modeAdhoc:'Any time', tilesHint:`Grown-ups: hold a task to add/remove it; hold + for another (up to ${ADHOC_MAX}).`, maxToast:`${ADHOC_MAX} tasks at a time`,
+      addAgain:name=>`Add another ${name}`, removeTask:name=>`Remove ${name} from this routine`,
       awayBtn:'Friend went away', backBtn:'Bring friend back', awayTag:(a)=>`${a} went away…`,
       editTitle:'Edit routines', editMorning:'Morning', editNight:'Night', addTask:'Add a task to the end:', maxTasks:'Max', minTask:'Keep at least one task', steps:'steps',
     },
@@ -810,7 +817,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       allDoneNight:'God natt!', allDoneNightSub:'Hela staden sover. Sov gott.', bannerNight:'Alla sover — god natt 🌙',
       hold:'Håll kvar…', soundOn:'Ljud på', soundOff:'Ljud av', modeMorning:'Morgonrutin', modeNight:'Kvällsrutin',
       undoHint:'Håll och dra åt vänster för att ångra. Med tangentbord, tryck två gånger.', slideBack:'← Dra tillbaka för att ångra', undoKey:'Tryck igen för att ångra',
-      greetAdhoc:'Nu kör vi!', modeAdhoc:'När som helst', tilesHint:`Vuxna: håll en uppgift för att lägga till (${ADHOC_MAX} åt gången)`, maxToast:`${ADHOC_MAX} uppgifter åt gången`,
+      greetAdhoc:'Nu kör vi!', modeAdhoc:'När som helst', tilesHint:`Vuxna: håll en uppgift för att lägga till/ta bort; håll + för en till (högst ${ADHOC_MAX}).`, maxToast:`${ADHOC_MAX} uppgifter åt gången`,
+      addAgain:name=>`Lägg till en till: ${name}`, removeTask:name=>`Ta bort ${name} från rutinen`,
       awayBtn:'Kompisen gick sin väg', backBtn:'Hämta tillbaka kompisen', awayTag:(a)=>`${a} gick sin väg…`,
       editTitle:'Ändra rutiner', editMorning:'Morgon', editNight:'Kväll', addTask:'Lägg till en uppgift sist:', maxTasks:'Max', minTask:'Behåll minst en uppgift', steps:'steg',
     }
@@ -980,15 +988,25 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
   let settings=normalizeSettings(load('mf_settings',{}));
   buildRoutines(settings.routines,settings.routineIds);
-  const freshDay=()=>({date:todayKey(),done:[],nightDone:[],adhocDone:[],adhocDoneAt:{},adhocArmed:[],animal:null,carType:null,trainType:null,away:false});
+  function adhocStep(id){
+    if(typeof id!=='string')return null;
+    const base=id.split('@')[0],task=ROUTINES.adhoc.steps.find(s=>s.id===base);
+    if(!task||(id!==base&&!/^[a-z0-9-]+$/i.test(id.slice(base.length+1))))return null;
+    return Object.assign({},task,{id});
+  }
+  const freshDay=()=>({date:todayKey(),done:[],nightDone:[],adhocDone:[],adhocArmed:[],adhocRunId:null,adhocClearAt:null,animal:null,carType:null,trainType:null,away:false});
   function normalizeDay(raw){
     const day=freshDay();
-    if(!record(raw)||raw.date!==day.date)return day;
+    if(!record(raw))return day;
+    day.adhocArmed=unique(raw.adhocArmed).filter(id=>adhocStep(id)).slice(0,ADHOC_MAX);
+    day.adhocDone=unique(raw.adhocDone).filter(id=>day.adhocArmed.includes(id));
+    day.adhocRunId=typeof raw.adhocRunId==='string'?raw.adhocRunId:null;
+    if(day.adhocArmed.length&&day.adhocDone.length===day.adhocArmed.length&&Number.isFinite(raw.adhocClearAt)&&raw.adhocClearAt>0)
+      day.adhocClearAt=Math.min(raw.adhocClearAt,Date.now()+ADHOC_CLEAR_MS);
+    // Any-time is a batch, independent of the daily morning/night reset.
+    if(raw.date!==day.date)return day;
     day.done=unique(raw.done).filter(id=>ROUTINES.morning.steps.some(s=>s.id===id));
     day.nightDone=unique(raw.nightDone).filter(id=>ROUTINES.night.steps.some(s=>s.id===id));
-    day.adhocArmed=unique(raw.adhocArmed).filter(id=>ROUTINES.adhoc.steps.some(s=>s.id===id)).slice(0,ADHOC_MAX);
-    day.adhocDone=unique(raw.adhocDone).filter(id=>day.adhocArmed.includes(id));
-    for(const id of day.adhocDone){const at=raw.adhocDoneAt?.[id];day.adhocDoneAt[id]=typeof at==='number'&&Number.isFinite(at)&&at>0?Math.min(at,Date.now()):0;}
     day.animal=Number.isInteger(raw.animal)&&raw.animal>=0&&raw.animal<ANIMALS.length?raw.animal:null;
     day.carType=CARS.some(c=>c.id===raw.carType)?raw.carType:null;
     day.trainType=TRAINS.some(t=>t.id===raw.trainType)?raw.trainType:null;
@@ -1004,6 +1022,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     settings=normalizeSettings(load('mf_settings',settings));
     buildRoutines(settings.routines,settings.routineIds);
     day=normalizeDay(load('mf_day',day));
+    if(clearAdhocIfDue())save('mf_day',day);
     const changed=before!==JSON.stringify([settings,day]);
     if(changed){applySoundSetting();}
     if(changed&&!busy){buildTown();renderAnimal();buildSteps();renderProgress();renderTown();}
@@ -1037,7 +1056,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   const isNight = () => mode === 'night';
   const isAdhoc = () => mode === 'adhoc';
   // In any-time mode only the armed tasks are shown, in the order they were armed
-  const steps = () => isAdhoc() ? day.adhocArmed.map(id => ROUTINES.adhoc.steps.find(s => s.id === id)).filter(Boolean) : R().steps;
+  const steps = () => isAdhoc() ? day.adhocArmed.map(adhocStep).filter(Boolean) : R().steps;
   const doneList = () => day[R().key];
 
   /* ---------- Audio ---------- */
@@ -1354,6 +1373,9 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     knob.setAttribute('aria-label',stepName(task)+' — '+(done?hint+' '+s.undoHint:s.slide));
     knob.setAttribute('aria-pressed',String(done));knob.setAttribute('aria-disabled',String(busy));
     el.querySelector('.hint').textContent=hint;el.querySelector('.step-do').textContent=done?'✓':'';
+    const add=el.querySelector('.step-add'),remove=el.querySelector('.step-remove');
+    add.setAttribute('aria-label',s.addAgain(stepName(task)));remove.setAttribute('aria-label',s.removeTask(stepName(task)));
+    add.disabled=busy||day.adhocArmed.length>=ADHOC_MAX;remove.disabled=busy;
   }
   function buildSteps(){
     const host = $('#steps'); host.innerHTML = '';
@@ -1364,11 +1386,14 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
         <div class="step-head">
           <div class="step-num">${i+1}</div>
           <div class="step-name"><button type="button"></button></div>
+          <div class="step-actions"><button type="button" class="step-add">+</button><button type="button" class="step-remove">×</button></div>
           <div class="step-do"></div>
         </div>
         <div class="track"><div class="fill"></div><div class="hint"></div><div class="knob" role="button" aria-pressed="false" tabindex="0">${s.icon}</div></div>`;
       host.appendChild(el);
       attachSlider(el, i);
+      attachEditHold(el.querySelector('.step-add'),()=>addAdhocCopy(s.id));
+      attachEditHold(el.querySelector('.step-remove'),()=>removeAdhocItem(s.id));
     });
     $('#stars').innerHTML = steps().map(()=> isNight() ? '<span>🌙</span>' : '<span>⭐</span>').join('');
   }
@@ -1419,7 +1444,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const host = $('#tiles'); host.innerHTML = '';
     ROUTINES.adhoc.steps.forEach((s,i)=>{
       const b = document.createElement('button'); b.type = 'button'; b.className = 'tile'; b.dataset.id = s.id;
-      b.innerHTML = `<span class="ring"></span>${s.icon}<small></small>`;
+      b.innerHTML = `<span class="ring"></span><span class="count" hidden></span>${s.icon}<small></small>`;
       let timer = null, fired = false;
       const start = e => { if (busy) return; e.preventDefault(); fired = false; b.classList.add('holding'); timer = setTimeout(()=>{ fired = true; b.classList.remove('holding'); toggleArm(s.id, b); }, 600); };
       const cancel = () => { clearTimeout(timer); b.classList.remove('holding'); };
@@ -1433,36 +1458,66 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
   function toggleArm(id,tile){return mutate(()=>toggleArmNow(id,tile));}
   function toggleArmNow(id, tile){
-    const armed = day.adhocArmed.includes(id);
-    if (armed){
-      day.adhocArmed = day.adhocArmed.filter(x => x !== id);
-      day.adhocDone = day.adhocDone.filter(x => x !== id); delete day.adhocDoneAt[id];
+    const task=adhocStep(id);if(!task)return;
+    const copies=day.adhocArmed.filter(x=>adhocStep(x).task===task.task);
+    if (copies.length){
+      removeAdhocItemNow(copies[copies.length-1]);return;
     } else {
       if (day.adhocArmed.length >= ADHOC_MAX){ tile.classList.remove('nope'); void tile.offsetWidth; tile.classList.add('nope'); toast(t().maxToast); SFX.lightOff(0); return; }
       day.adhocArmed.push(id);
     }
+    refreshAdhocRoutine();
+  }
+  function attachEditHold(button,action){
+    let timer=null;
+    const cancel=()=>{clearTimeout(timer);button.classList.remove('holding');};
+    button.addEventListener('pointerdown',e=>{
+      if(busy||button.disabled||!e.isPrimary||e.button!==0)return;
+      e.preventDefault();cancel();button.classList.add('holding');
+      timer=setTimeout(()=>{cancel();if(button.isConnected&&!busy)action();},600);
+    });
+    ['pointerup','pointercancel','pointerleave','blur'].forEach(type=>button.addEventListener(type,cancel));
+    button.addEventListener('contextmenu',e=>e.preventDefault());
+    button.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();if(!e.repeat&&!busy&&!button.disabled)action();}});
+  }
+  function addAdhocCopy(id){return mutate(()=>{
+    if(!isAdhoc()||!day.adhocArmed.includes(id)||day.adhocArmed.length>=ADHOC_MAX)return;
+    day.adhocArmed.push(newStepId('a',adhocStep(id).task));refreshAdhocRoutine();
+  });}
+  function removeAdhocItem(id){return mutate(()=>{if(isAdhoc())removeAdhocItemNow(id);});}
+  function removeAdhocItemNow(id){
+    if(!day.adhocArmed.includes(id))return;
+    day.adhocArmed=day.adhocArmed.filter(x=>x!==id);day.adhocDone=day.adhocDone.filter(x=>x!==id);refreshAdhocRoutine();
+  }
+  function refreshAdhocRoutine(){
+    invalidateAdhocCleanup();
     save('mf_day', day); SFX.click(); buildSteps(); renderProgress();
+    if(adhocAllDone())celebrateAdhocEdit();
   }
   function renderTiles(){
     document.querySelectorAll('.tile').forEach(el => {
-      el.classList.toggle('armed', day.adhocArmed.includes(el.dataset.id));
-      el.classList.toggle('done', day.adhocDone.includes(el.dataset.id));
+      const copies=day.adhocArmed.filter(id=>adhocStep(id).task===adhocStep(el.dataset.id).task);
+      el.classList.toggle('armed', copies.length>0);
+      el.classList.toggle('done', copies.length>0&&copies.every(id=>day.adhocDone.includes(id)));
+      el.setAttribute('aria-pressed',String(copies.length>0));
+      const count=el.querySelector('.count');count.hidden=copies.length<2;count.textContent='×'+copies.length;
     });
   }
-  // A finished any-time task clears itself (and disarms) after ADHOC_DONE_MS
-  function expireAdhoc(){
-    if (busy) return;
-    return mutate(expireAdhocNow);
+  const adhocAllDone=()=>day.adhocArmed.length>0&&day.adhocArmed.every(id=>day.adhocDone.includes(id));
+  function invalidateAdhocCleanup(){
+    day.adhocClearAt=null;day.adhocRunId=newStepId('adhoc','run');
   }
-  function expireAdhocNow(){
-    const now = Date.now(); let changed = false;
-    day.adhocDone.slice().forEach(id => {
-      if (now - (day.adhocDoneAt[id] || 0) >= ADHOC_DONE_MS){
-        day.adhocDone = day.adhocDone.filter(x => x !== id); delete day.adhocDoneAt[id];
-        day.adhocArmed = day.adhocArmed.filter(x => x !== id); changed = true;
-      }
-    });
-    if (changed){ save('mf_day', day); if (isAdhoc()){ buildSteps(); renderProgress(); } }
+  function finishAdhocCelebration(runId){return mutate(()=>{
+    if(day.adhocRunId!==runId||!adhocAllDone())return;
+    day.adhocClearAt=Math.max(day.adhocClearAt||0,Date.now()+ADHOC_CLEAR_MS);save('mf_day',day);
+  },{whileBusy:true});}
+  function celebrateAdhocEdit(){
+    const runId=day.adhocRunId;
+    SFX.fanfare();confetti(()=>finishAdhocCelebration(runId));
+  }
+  function clearAdhocIfDue(){
+    if(!day.adhocClearAt||Date.now()<day.adhocClearAt||!adhocAllDone())return false;
+    day.adhocArmed=[];day.adhocDone=[];day.adhocClearAt=null;day.adhocRunId=null;return true;
   }
   /* ---------- Routine editor (grown-ups sheet) ---------- */
   function renderEditor(){
@@ -1915,7 +1970,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   function undoTask(id,expectedMode,expectedDate){return mutate(()=>{
     if(mode!==expectedMode||day.date!==expectedDate||!steps().some(s=>s.id===id))return;
     const list=doneList(),index=list.indexOf(id);if(index<0)return;
-    list.splice(index,1);if(isAdhoc())delete day.adhocDoneAt[id];
+    list.splice(index,1);if(isAdhoc())invalidateAdhocCleanup();
     save('mf_day',day);$('#finale').hidden=true;renderProgress();renderTown();SFX.click();
   });}
   let animalAnimationTimer=null;
@@ -1936,16 +1991,18 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     if(!s||doneList().includes(id))return;
     const actionDate=day.date;
     busy=true;doneList().push(id);
-    if(isAdhoc())day.adhocDoneAt[id]=Date.now();
+    if(isAdhoc())invalidateAdhocCleanup();
+    const adhocRun=isAdhoc()?day.adhocRunId:null;
+    const afterAdhocCelebration=()=>{if(adhocRun)finishAdhocCelebration(adhocRun);};
     save('mf_settings',settings);save('mf_day',day);renderProgress();
     const allDone=()=>steps().length>0&&steps().every(task=>doneList().includes(task.id));
     const currentDay=()=>{
-      if(todayKey()===actionDate)return true;
+      if(adhocRun?day.adhocRunId===adhocRun:todayKey()===actionDate)return true;
       releaseBusy();return false;
     };
     const celebrate=()=>{
-      releaseBusy();if(actionDate!==todayKey())return;
-      SFX.fanfare();confetti();if(!isAdhoc())$('#finale').hidden=false;
+      releaseBusy();if(adhocRun?day.adhocRunId!==adhocRun:actionDate!==todayKey())return;
+      SFX.fanfare();confetti(afterAdhocCelebration);if(!isAdhoc())$('#finale').hidden=false;
     };
     const after=()=>{
       releaseBusy();
@@ -1958,7 +2015,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     };
     if(settings.version==='car')carStep(i,()=>afterVehicleStep(carDrive));
     else if(settings.version==='train')trainStep(i,()=>afterVehicleStep(trainLap));
-    else if(isAdhoc()){if(isAway())fireworksOnly(releaseBusy);else launchStep(releaseBusy);}
+    else if(isAdhoc()){
+      const finished=()=>{releaseBusy();afterAdhocCelebration();};
+      if(isAway())fireworksOnly(finished);else launchStep(finished);
+    }
     else if(isNight())heroStep(i,after);
     else if(isAway()){SFX.click();[N.C5,N.E5].forEach((f,k)=>tone(f,.25,{when:k*.12,vol:.14}));setTimeout(after,900);}
     else playAnim(s.anim,after,s.sfx);
@@ -1967,7 +2027,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   function fireworksOnly(cb){
     const bursts = [{t:0.6,big:false},{t:1.25,big:true},{t:1.9,big:false},{t:2.55,big:true}];
     bursts.forEach(b => { tone(600,.35,{type:'triangle',vol:.08,when:b.t-0.45,to:1600}); SFX.boom(b.t, b.big); });
-    fireworks(bursts); setTimeout(()=>cb && cb(), 4200);
+    fireworks(bursts,cb);
   }
   function launchStep(cb){
     const bursts = [{t:4.0,big:false},{t:4.65,big:true},{t:5.3,big:false},{t:5.95,big:true}];
@@ -2068,17 +2128,17 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   },true);
   $('#close-sheet').addEventListener('click', closeSheet);
   $('#sheet').addEventListener('click', e => { if (e.target === $('#sheet')) closeSheet(); });
-  $('#undo').addEventListener('click',()=>mutate(()=>{const id=doneList().pop();if(isAdhoc()&&id)delete day.adhocDoneAt[id];save('mf_day',day);renderProgress();renderTown();SFX.click();}));
+  $('#undo').addEventListener('click',()=>mutate(()=>{const id=doneList().pop();if(isAdhoc()&&id)invalidateAdhocCleanup();save('mf_day',day);renderProgress();renderTown();SFX.click();}));
   $('#reset').addEventListener('click',()=>mutate(()=>{
     day[R().key] = [];
-    if (isAdhoc()){ day.adhocDoneAt = {}; day.adhocArmed = []; }
+    if (isAdhoc()){ day.adhocArmed = []; invalidateAdhocCleanup(); }
     save('mf_day', day); buildSteps(); renderProgress(); renderTown(); SFX.click(); closeSheet();
   }));
   const picker = $('#animal-picker');
   ANIMALS.forEach((a,i)=>{ const b = document.createElement('button'); b.type='button'; b.setAttribute('aria-label', a.en); b.innerHTML = svgWrap(a.svg); b.addEventListener('click',()=>mutate(()=>{day.animal=i;save('mf_day',day);renderAnimal();SFX.click();})); picker.appendChild(b); });
 
   /* ---------- Confetti ---------- */
-  function confetti(){
+  function confetti(cb){
     const cv = $('#confetti'), cx = cv.getContext('2d'); cv.hidden = false;
     const dpr = Math.min(window.devicePixelRatio||1, 2); cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
     const colors = ['#FFB020','#47B87A','#5AA9FF','#F06292','#FFD84D','#B388FF'];
@@ -2093,12 +2153,12 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
         p.x += (p.vx + Math.sin(el*2 + p.sway)*40)*dt; p.y += p.vy*dt; p.rot += p.vr*dt; p.vy += 18*dt;
         cx.save(); cx.translate(p.x,p.y); cx.rotate(p.rot); cx.fillStyle=p.c; cx.globalAlpha = alpha; cx.fillRect(-p.r/2,-p.r/3,p.r,p.r*0.66); cx.restore();
       });
-      if (el < DUR) requestAnimationFrame(frame); else { cv.hidden = true; cx.setTransform(1,0,0,1,0,0); }
+      if (el < DUR) requestAnimationFrame(frame); else { cv.hidden = true; cx.setTransform(1,0,0,1,0,0); cb && cb(); }
     })(t0);
   }
 
   /* ---------- Fireworks ---------- */
-  function fireworks(bursts){
+  function fireworks(bursts,cb){
     const cv = $('#confetti'), cx = cv.getContext('2d'); cv.hidden = false;
     const dpr = Math.min(window.devicePixelRatio||1, 2); cv.width = innerWidth*dpr; cv.height = innerHeight*dpr; cx.setTransform(dpr,0,0,dpr,0,0);
     const palette = ['#FF5E7A','#FFD36B','#5AC8FA','#7CFF9B','#FF9B3D','#C77DFF','#FFFFFF'];
@@ -2136,7 +2196,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       }
       cx.globalAlpha = 1;
       const done = el > 1 && rockets.every(r=>r.exploded) && parts.length === 0;
-      if (!done && el < 7) requestAnimationFrame(frame); else { cv.hidden = true; cx.setTransform(1,0,0,1,0,0); }
+      if (!done && el < 7) requestAnimationFrame(frame); else { cv.hidden = true; cx.setTransform(1,0,0,1,0,0); cb && cb(); }
     })(t0);
   }
 
@@ -2144,7 +2204,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   setInterval(()=>{if(!busy)mutate(()=>{save('mf_day',day);});},60000);
   window.addEventListener('resize', ()=>renderProgress());
 
-  setInterval(expireAdhoc, 5000);
+  setInterval(refreshFromStorage, 5000);
 
   /* ---------- Offline installation ---------- */
   let offlineState = 'checking';
@@ -2180,10 +2240,17 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
 
   /* ---------- Boot ---------- */
-  buildTown(); buildTiles(); buildSkyline(); renderAnimal(); expireAdhoc();
+  buildTown(); buildTiles(); buildSkyline(); renderAnimal();
   document.body.classList.toggle('night', isNight());
   buildSteps(); renderProgress(); renderTown();
-  mutate(()=>{save('mf_settings',settings);save('mf_day',day);});
+  mutate(()=>{
+    // Reloading ends an in-flight celebration. Give that completed batch a full
+    // five minutes from reopening; preserve an already saved countdown.
+    if(adhocAllDone()&&!day.adhocClearAt){
+      if(!day.adhocRunId)invalidateAdhocCleanup();day.adhocClearAt=Date.now()+ADHOC_CLEAR_MS;
+    }
+    save('mf_settings',settings);save('mf_day',day);
+  });
   applySoundSetting();
   prepareOffline();
 })();
