@@ -1715,6 +1715,19 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const caption=settings.lang==='sv'?`${c.sv} · ${completed.length} av ${items.length} byggsteg klara`:`${c.en} · ${completed.length} of ${items.length} build steps done`;
     $('#car-caption').textContent=caption;$('#car-scene').setAttribute('aria-label',caption);
   }
+  function vehicleWiggle(art,cb){
+    art.style.transformOrigin='0px 0px';
+    art.animate([
+      {scale:'1',rotate:'0deg',offset:0},
+      {scale:'1.55',rotate:'-6deg',offset:.3},
+      {scale:'1.6',rotate:'6deg',offset:.45},
+      {scale:'1.55',rotate:'-6deg',offset:.6},
+      {scale:'1.6',rotate:'6deg',offset:.75},
+      {scale:'1',rotate:'0deg',offset:1}
+    ],{duration:2500,easing:'ease-in-out'});
+    tone(440,.35,{vol:.08,to:660});
+    setTimeout(cb,2550);
+  }
   function carStep(i,cb){
     carMoving=true;
     const n=steps().length,k=steps().filter(s=>doneList().includes(s.id)).length;
@@ -1729,7 +1742,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       icon.remove();
       parts.forEach((el,j)=>{el.setAttribute('opacity','1');el.style.transformOrigin='0px 0px';el.animate([{opacity:0,translate:'0 -20px',scale:'.7'},{opacity:1,translate:'0 0',scale:'1.15'},{opacity:1,translate:'0 0',scale:'1'}],{duration:900,delay:j*110,easing:'ease-out',fill:'backwards'});tone(523+j*70,.16,{vol:.08,when:j*.11});});
     },850);
-    setTimeout(()=>{carMoving=false;cb();},2000+Math.max(0,parts.length-1)*110);
+    setTimeout(()=>vehicleWiggle($('#car-art'),()=>{carMoving=false;cb();}),2000+Math.max(0,parts.length-1)*110);
   }
   function carDrive(cb){
     carMoving=true;
@@ -1927,18 +1940,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       ],{duration:1650,easing:'ease-in-out'});
       tone(660,.12,{vol:.08}); tone(784,.12,{vol:.08,when:.825});
       setTimeout(()=>{
-        const carriage = target.firstElementChild;
-        carriage.style.transformOrigin = '0px 0px';
-        carriage.animate([
-          {scale:'1',rotate:'0deg',offset:0},
-          {scale:'1.55',rotate:'-6deg',offset:.3},
-          {scale:'1.6',rotate:'6deg',offset:.45},
-          {scale:'1.55',rotate:'-6deg',offset:.6},
-          {scale:'1.6',rotate:'6deg',offset:.75},
-          {scale:'1',rotate:'0deg',offset:1}
-        ],{duration:2500,easing:'ease-in-out'});
-        tone(440,.35,{vol:.08,to:660});
-        setTimeout(()=>{trainMoving=false;cb();},2550);
+        vehicleWiggle(target.firstElementChild,()=>{trainMoving=false;cb();});
       },1700);
     },1250);
   }
