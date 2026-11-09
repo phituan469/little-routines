@@ -533,7 +533,7 @@ body.train-version #away,body.train-version #return,body.train-version #pick-lab
 </style>
 
 <style>
-/* Car workshop and winding finish-line course. */
+/* Vehicle workshop and winding finish-line course. */
 #car-scene{display:none;position:absolute;inset:76px 12px 35px;z-index:2}
 #car-scene > svg{width:100%;height:100%;overflow:visible}
 #car-caption{position:absolute;bottom:10px;left:10px;right:10px;text-align:center;font:15px Fredoka,sans-serif;color:var(--ink)}
@@ -610,7 +610,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       </svg></div>
       <div class="animal" id="animal" role="button" tabindex="0" aria-label="Today's friend"></div>
     </div>
-    <div id="car-scene" role="img" aria-label="Build a car"></div>
+    <div id="car-scene" role="img" aria-label="Build a vehicle"></div>
     <div id="car-caption" hidden></div>
     <div id="train-scene" role="img" aria-label="Routine train"></div>
     <div id="train-caption" hidden></div>
@@ -638,14 +638,14 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     <div class="row" role="group" aria-labelledby="version-label">
       <button class="btn train-choice" data-version="animal" aria-pressed="true">🐰 <span>Animal</span></button>
       <button class="btn train-choice" data-version="train" aria-pressed="false">🚂 <span>Train</span></button>
-      <button class="btn train-choice" data-version="car" aria-pressed="false">🚗 <span>Car</span></button>
+      <button class="btn train-choice" data-version="car" aria-pressed="false">🚙 <span>Vehicle</span></button>
     </div>
     <div id="train-options" hidden>
       <div class="sheet-label" id="train-pick-label">Today’s train</div>
       <div class="car-picker" id="train-picker" role="group" aria-labelledby="train-pick-label"></div>
     </div>
     <div id="car-options" hidden>
-      <div class="sheet-label" id="car-pick-label">Choose your car</div>
+      <div class="sheet-label" id="car-pick-label">Today’s vehicle</div>
       <div class="car-picker" id="car-picker" role="group" aria-labelledby="car-pick-label"></div>
     </div>
     <div class="row">
@@ -736,15 +736,15 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     dressed:{icon:ICON.dressed,en:'Get dressed', sv:'Klä på sig'},
   };
   const TASK_ORDER = ['pee','teeth','water','food','poop','shower','hands','dressed'];
-  const CARS = [
-    {id:'hatchback',en:'Hatchback',sv:'Halvkombi',color:'#22BD70',length:100,width:54,cabin:52},
+  const VEHICLES = [
     {id:'sedan',en:'Sedan',sv:'Sedan',color:'#248AF2',length:140,width:52,cabin:48},
-    {id:'coupe',en:'Coupe',sv:'Kupé',color:'#9252EC',length:130,width:48,cabin:40},
-    {id:'suv',en:'SUV',sv:'SUV',color:'#FF9828',length:138,width:68,cabin:70},
-    {id:'pickup',en:'Pickup',sv:'Pickup',color:'#F05243',length:144,width:58,cabin:42},
-    {id:'van',en:'Van',sv:'Skåpbil',color:'#12BDC8',length:144,width:68,cabin:88},
-    {id:'convertible',en:'Convertible',sv:'Cabriolet',color:'#F247A0',length:124,width:54,cabin:48},
-    {id:'race',en:'Race car',sv:'Racerbil',color:'#FFD326',length:138,width:56,cabin:42}
+    {id:'pickup',en:'Pickup truck',sv:'Pickup',color:'#F05243',length:144,width:58,cabin:42},
+    {id:'ambulance',en:'Ambulance',sv:'Ambulans',color:'#FFF9E7',length:156,width:62},
+    {id:'firetruck',en:'Fire truck',sv:'Brandbil',color:'#E94735',length:164,width:64},
+    {id:'bus',en:'Bus',sv:'Buss',color:'#F6C23A',length:168,width:66},
+    {id:'police',en:'Police car',sv:'Polisbil',color:'#254B85',length:140,width:52,cabin:48},
+    {id:'lorry',en:'Lorry',sv:'Lastbil',color:'#259B87',length:168,width:64},
+    {id:'tanker',en:'Gas tanker',sv:'Tankbil',color:'#6FA94D',length:168,width:64}
   ];
   const TRAINS = [
     {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#EE4F43',accent:'#FFCF28'},
@@ -1008,7 +1008,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     day.done=unique(raw.done).filter(id=>ROUTINES.morning.steps.some(s=>s.id===id));
     day.nightDone=unique(raw.nightDone).filter(id=>ROUTINES.night.steps.some(s=>s.id===id));
     day.animal=Number.isInteger(raw.animal)&&raw.animal>=0&&raw.animal<ANIMALS.length?raw.animal:null;
-    day.carType=CARS.some(c=>c.id===raw.carType)?raw.carType:null;
+    day.carType=VEHICLES.some(c=>c.id===raw.carType)?raw.carType:null;
     day.trainType=TRAINS.some(t=>t.id===raw.trainType)?raw.trainType:null;
     day.away=raw.away===true;
     return day;
@@ -1326,7 +1326,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     document.documentElement.lang = settings.lang;
     renderOfflineStatus();
     $('#version-label').textContent = settings.lang === 'sv' ? 'Äventyr' : 'Adventure';
-    document.querySelectorAll('[data-version]').forEach(b=>{ b.setAttribute('aria-pressed', String(settings.version===b.dataset.version)); b.querySelector('span').textContent = b.dataset.version==='car' ? (settings.lang==='sv'?'Bil':'Car') : b.dataset.version==='train' ? (settings.lang==='sv'?'Tåg':'Train') : (settings.lang==='sv'?'Djur':'Animal'); });
+    document.querySelectorAll('[data-version]').forEach(b=>{ b.setAttribute('aria-pressed', String(settings.version===b.dataset.version)); b.querySelector('span').textContent = b.dataset.version==='car' ? (settings.lang==='sv'?'Fordon':'Vehicle') : b.dataset.version==='train' ? (settings.lang==='sv'?'Tåg':'Train') : (settings.lang==='sv'?'Djur':'Animal'); });
     $('#greet').textContent = isAdhoc() ? s.greetAdhoc : night ? s.greetNight : s.greet;
     $('#mode-adhoc').setAttribute('aria-pressed', String(isAdhoc())); $('#mode-adhoc').setAttribute('aria-label', s.modeAdhoc);
     $('#tiles-hint').textContent = s.tilesHint;
@@ -1348,13 +1348,13 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     $('#finale-sub').textContent = night ? s.allDoneNightSub : s.allDoneSub;
     $('#finale .stars').innerHTML = night ? '<span>✨</span><span>🌙</span><span>✨</span>' : '<span>⭐</span>'.repeat(6);
     $('#banner').textContent = night ? s.bannerNight : s.banner;
-    $('#stage').setAttribute('aria-label', settings.version==='car' ? (settings.lang==='sv'?'Bilverkstad':'Car workshop') : settings.version==='train' ? (settings.lang==='sv'?'Rutintåg':'Routine train') : (settings.lang==='sv'?'Dagens vän':"Today's friend"));
+    $('#stage').setAttribute('aria-label', settings.version==='car' ? (settings.lang==='sv'?'Fordonsverkstad':'Vehicle workshop') : settings.version==='train' ? (settings.lang==='sv'?'Rutintåg':'Routine train') : (settings.lang==='sv'?'Dagens vän':"Today's friend"));
     if(settings.version==='train') $('#sheet-p').textContent=settings.lang==='sv'?'Ångra ett steg, välj ett tåg eller ändra dina rutiner.':'Undo a step, choose a train, or edit your routines.';
     if(settings.version==='car'){
-      $('#sheet-p').textContent=settings.lang==='sv'?'Ångra ett steg, välj en bil eller ändra dina rutiner.':'Undo a step, choose a car, or edit your routines.';
+      $('#sheet-p').textContent=settings.lang==='sv'?'Ångra ett steg, välj ett fordon eller ändra dina rutiner.':'Undo a step, choose a vehicle, or edit your routines.';
       $('#finale-title').textContent=settings.lang==='sv'?'Dags att köra!':'Ready to roll!';
-      $('#finale-sub').textContent=settings.lang==='sv'?'Du byggde hela bilen! Tryck för att stänga.':'You built the whole car! Tap to close.';
-      $('#banner').textContent=settings.lang==='sv'?'Bilen är klar — bra jobbat! 🚗':'Car complete — great work! 🚗';
+      $('#finale-sub').textContent=settings.lang==='sv'?'Du byggde hela fordonet! Tryck för att stänga.':'You built the whole vehicle! Tap to close.';
+      $('#banner').textContent=settings.lang==='sv'?'Fordonet är klart — bra jobbat! 🚙':'Vehicle complete — great work! 🚙';
     }
     $('#holdhint').textContent = s.hold;
     $('#sound').setAttribute('aria-pressed',String(settings.sound));
@@ -1622,64 +1622,89 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     });
   }
 
-  /* ---------- Build-a-car adventure ---------- */
+  /* ---------- Vehicle adventure ---------- */
   const carCourse = 'M110 215 C70 215 42 190 60 155 L105 75 Q125 45 155 75 L215 165 Q235 195 255 165 L315 75 Q335 45 355 75 L415 165 Q435 195 455 165 L500 100 Q530 65 550 105 Q580 190 515 225 C420 275 185 270 110 215 Z';
-  const selectedCar = () => CARS.find(c=>c.id===day.carType) || CARS[dayIndex() % CARS.length];
+  const selectedVehicle = () => VEHICLES.find(c=>c.id===day.carType) || VEHICLES[dayIndex() % VEHICLES.length];
   let carMoving=false;
   // Eight visual parts are grouped into as many build stages as the routine has tasks.
   // The first k completions always produce floor(k*8/n) parts, even out of order.
-  function carTopParts(c){
-    const l=c.length,w=c.width,front=l/2,rear=-l/2,axle=l*.3;
-    const wheel=(x,y)=>`<rect x="${x-11}" y="${y-6}" width="22" height="12" rx="4" fill="#344566"/><path d="M${x-6} ${y} h12" stroke="#A7B8C9" stroke-width="2"/>`;
-    const cabinX=c.id==='pickup'?3:-c.cabin/2;
-    return [
-      `<rect x="${rear+6}" y="${-w/2+4}" width="${l-12}" height="${w-8}" rx="13" fill="#A6B7BD" stroke="#7B919E" stroke-width="2"/><path d="M${rear+10} 0 H${front-10}" stroke="#E7F0F0" stroke-width="5"/>`,
-      wheel(-axle,-w/2-3)+wheel(-axle,w/2+3),
-      wheel(axle,-w/2-3)+wheel(axle,w/2+3),
-      `<rect x="${rear}" y="${-w/2}" width="${l}" height="${w}" rx="${c.id==='van'||c.id==='suv'?10:20}" fill="${c.color}" stroke="#5C7685" stroke-width="2"/><path d="M${rear+15} ${-w/2+5} H${front-19}" stroke="#FFFFFF" stroke-opacity=".45" stroke-width="3" stroke-linecap="round"/>`,
-      `<rect x="${cabinX}" y="${-w/2+5}" width="${c.cabin}" height="${w-10}" rx="9" fill="#4E6C82"/>`+(c.id==='convertible'?`<rect x="${cabinX+8}" y="${-w/2+10}" width="${c.cabin-19}" height="${w-20}" rx="5" fill="#F7D7B5"/><path d="M${cabinX+14} -13 V13" stroke="#B8856A" stroke-width="5"/>`:`<rect x="${cabinX+9}" y="${-w/2+9}" width="${c.cabin-24}" height="${w-18}" rx="5" fill="${c.color}"/>`),
-      `<path d="M${cabinX+c.cabin-13} ${-w/2+9} h7 v${w-18} h-7Z" fill="#C4E9F4"/><path d="M${cabinX+4} ${-w/2+9} h5 v${w-18} h-5Z" fill="#B8D7E7"/><path d="M${cabinX+c.cabin} ${-w/2-2} h8 M${cabinX+c.cabin} ${w/2+2} h8" stroke="${c.color}" stroke-width="5" stroke-linecap="round"/>`,
-      `<rect x="${front-8}" y="${-w/2+7}" width="6" height="12" rx="3" fill="#FFF2B9"/><rect x="${front-8}" y="${w/2-19}" width="6" height="12" rx="3" fill="#FFF2B9"/><rect x="${rear+2}" y="${-w/2+7}" width="4" height="10" rx="2" fill="#B96564"/><rect x="${rear+2}" y="${w/2-17}" width="4" height="10" rx="2" fill="#B96564"/><path d="M${front-2} -6 V6" stroke="#527083" stroke-width="3"/>`,
-      c.id==='pickup'?`<rect x="${rear+8}" y="${-w/2+7}" width="48" height="${w-14}" rx="4" fill="#B27560"/><path d="M${rear+15} -15 h34 M${rear+15} -5 h34 M${rear+15} 5 h34 M${rear+15} 15 h34" stroke="#DCA98F" stroke-width="2"/>`:
-      c.id==='race'?`<path d="M${rear+9} -34 V34" stroke="#344566" stroke-width="7"/><path d="M10 -8 H${front-12} M10 8 H${front-12}" stroke="#FFF8DE" stroke-width="5"/><circle cx="-5" r="12" fill="#FFF8DE"/><text x="-5" y="5" font-size="15" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
-      c.id==='suv'?`<path d="M-22 -19 H22 M-22 19 H22" stroke="#354C60" stroke-width="6"/><circle cx="${rear+3}" r="13" fill="#344566"/><circle cx="${rear+3}" r="7" fill="#8EA6B5"/>`:
-      c.id==='van'?`<path d="M-37 -17 H4 M-37 17 H4 M-16 -17 V17" stroke="#5796A1" stroke-width="3"/>`:
-      `<path d="M${front-24} -10 H${front-17} M${front-24} 10 H${front-17} M-4 ${w/2-4} h8 M-4 ${-w/2+4} h8" stroke="#4E6C82" stroke-width="2.5" stroke-linecap="round"/>`
-    ];
-  }
-  // Side silhouettes for the workshop and picker; overhead art is reserved for the driving course.
-  function carParts(c){
-    const front=c.length/2,rear=-front,axle=c.length*.3;
-    const tall=c.id==='suv'||c.id==='van',roof=tall?-48:c.id==='hatchback'?-41:c.id==='coupe'||c.id==='race'?-25:-34;
-    const cabRear=c.id==='pickup'?-5:c.id==='van'?rear+2:c.id==='suv'?rear+9:c.id==='hatchback'?rear+8:c.id==='coupe'?rear+17:rear+31;
-    const cabFront=c.id==='pickup'?39:c.id==='sedan'?front-32:c.id==='race'?front-31:front-21;
-    const wheel=x=>`<circle cx="${x}" cy="21" r="${c.id==='suv'?16:14}" fill="#344566"/><circle cx="${x}" cy="21" r="8" fill="#D5E4ED"/><circle cx="${x}" cy="21" r="3" fill="#859EAF"/><path d="M${x-5} 16 L${x+5} 26 M${x+5} 16 L${x-5} 26" stroke="#92A9B9" stroke-width="1.5"/>`;
-    const body=`M${rear+5} -10 H${front-16} Q${front} -8 ${front} 1 V13 Q${front} 18 ${front-5} 18 H${axle+16} Q${axle+16} 3 ${axle} 3 Q${axle-16} 3 ${axle-16} 18 H${-axle+16} Q${-axle+16} 3 ${-axle} 3 Q${-axle-16} 3 ${-axle-16} 18 H${rear+4} Q${rear} 18 ${rear} 11 V-3 Q${rear} -10 ${rear+5} -10Z`;
-    let cabin,windows,details;
-    if(c.id==='convertible'){
-      cabin=`<path d="M-31 -9 V-21 Q-23 -28 -17 -20 V-11 M-4 -9 V-21 Q4 -28 10 -20 V-10" fill="#C68D78" stroke="#A57161" stroke-width="2"/><path d="M29 -10 L19 -34 H23 L39 -10" fill="${c.color}" stroke="#5C7685" stroke-width="2"/>`;
-      windows='<path d="M25 -28 L34 -11 H23Z" fill="#C6EAF3"/><path d="M-40 -11 H15" stroke="#F7D7B5" stroke-width="3"/>';
-      details='<path d="M-8 -3 H2 M-35 4 H16" stroke="#B97B98" stroke-width="2" stroke-linecap="round"/>';
+  const vehicleWorkshopScale=c=>Math.min(1.3,198/c.length);
+  const vehicleRect=(x,y,w,h,r,fill,stroke='none')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${fill}" stroke="${stroke}" stroke-width="2"/>`;
+  const vehicleLine=(d,stroke,width=2)=>`<path d="${d}" fill="none" stroke="${stroke}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  const vehiclePath=(d,fill,stroke='none')=>`<path d="${d}" fill="${fill}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>`;
+  const vehicleGlass=(x,y,w,h)=>vehicleRect(x,y,w,h,2,'#C6EAF3','#5C8197');
+  const rescueCross=(x,y)=>vehicleLine(`M${x-6} ${y} h12 M${x} ${y-6} v12`,'#1965B8',4);
+  const vehicleBeacon=(x,y)=>vehicleRect(x,y,20,5,2,'#344566')+vehicleRect(x+1,y-3,8,6,2,'#FA4C53')+vehicleRect(x+11,y-3,8,6,2,'#45AFFF');
+  const roofBeacon=(x)=>vehicleRect(x,-22,8,44,3,'#344566')+vehicleRect(x+1,-21,6,19,2,'#FF4F5C')+vehicleRect(x+1,2,6,19,2,'#43BAFF');
+  const vehicleLadder=(x,y,length)=>vehicleLine(`M${x} ${y} h${length} M${x} ${y+8} h${length}`,'#E5F1F5',3)+vehicleLine(Array.from({length:Math.floor(length/9)+1},(_,i)=>`M${x+i*9} ${y} v8`).join(' '),'#A5BCC9',2);
+  function vehicleTopArt(c){
+    const {length:l,width:w,id,color}=c,front=l/2,rear=-front,axle=l*.3,edge='#40586E';
+    const compact=!!c.cabin;
+    const wheel=(x,y)=>vehicleRect(x-10,y-5,20,10,3,'#273B55');
+    let art=[-axle,axle,...(id==='lorry'||id==='tanker'?[-axle+20]:[])].map(x=>wheel(x,-w/2)+wheel(x,w/2)).join('');
+    art+=vehicleRect(rear,-w/2,l,w,compact?17:9,color,edge);
+    if(compact){
+      const cabX=id==='pickup'?1:-c.cabin/2;
+      if(id==='police')art+=vehicleRect(-28,-w/2+1,56,w-2,6,'#F4F9FF');
+      if(id==='pickup')art+=vehicleRect(rear+7,-w/2+6,52,w-12,4,'#923D34')+vehicleLine(`M${rear+12} -14 h42 M${rear+12} 0 h42 M${rear+12} 14 h42`,'#DF8A70',2);
+      art+=vehicleRect(cabX,-w/2+5,c.cabin,w-10,8,'#496D88')+vehicleRect(cabX+7,-w/2+10,c.cabin-14,w-20,4,color);
+      if(id==='police')art+=roofBeacon(-4);
+    }else if(id==='bus'){
+      art+=vehicleRect(rear+10,-w/2+6,l-33,w-12,5,'#FFD86C')+vehicleLine(`M${rear+18} -25 H${front-20} M${rear+18} 25 H${front-20}`,'#405B75',5)+vehicleRect(front-17,-w/2+6,10,w-12,3,'#6AA4C2');
     }else{
-      const boxy=['van','suv','hatchback'].includes(c.id);
-      const cabinShape=boxy ? `M${cabRear-3} -9 V${roof+7} Q${cabRear-3} ${roof} ${cabRear+5} ${roof} H${cabFront-15} Q${cabFront-7} ${roof} ${cabFront-4} ${roof+9} L${cabFront+10} -9Z` : `M${cabRear-11} -9 L${cabRear+4} ${roof+7} Q${cabRear+10} ${roof} ${cabRear+19} ${roof} H${cabFront-17} Q${cabFront-10} ${roof} ${cabFront-6} ${roof+8} L${cabFront+9} -9Z`;
-      cabin=`<path d="${cabinShape}" fill="${c.color}" stroke="#49697B" stroke-width="2"/>`;
-      if(c.id==='sedan') cabin+=`<path d="M${cabRear+11} ${roof+1} H${cabFront-17}" stroke="#F2F7FF" stroke-width="4" stroke-linecap="round"/>`;
-      const left=cabRear+7,right=cabFront-1,mid=(left+right)/2;
-      windows=`<path d="M${left-5} -13 L${left+6} ${roof+7} H${mid-3} V-13Z M${mid+2} ${roof+7} H${right-9} L${right+4} -13 H${mid+2}Z" fill="#C6EAF3" stroke="#6E96AD" stroke-width="1.5"/><path d="M${cabFront+5} -10 h9" stroke="#5C7685" stroke-width="3" stroke-linecap="round"/>`;
-      details=c.id==='pickup'?`<path d="M${rear+5} -19 H-16 V5 H${rear+5}" fill="#C8312A" stroke="#B57762" stroke-width="2"/><path d="M${rear+10} -12 H-22" stroke="#F4C6AD" stroke-width="2"/>`:
-        c.id==='suv'?`<path d="M${cabRear+1} ${roof-3} H${cabFront-8}" stroke="#354C60" stroke-width="6" stroke-linecap="round"/><path d="M-14 -3 h7 M18 -3 h7" stroke="#687C67" stroke-width="2.5" stroke-linecap="round"/><rect x="${rear-5}" y="-9" width="7" height="22" rx="3" fill="#344566"/>`:
-        c.id==='van'?`<rect x="${rear+14}" y="${roof+8}" width="28" height="21" rx="3" fill="${c.color}" stroke="#5D9AA5" stroke-width="2"/><path d="M-2 -7 V14 M4 -2 h7" stroke="#4E8593" stroke-width="2"/>`:
-        c.id==='race'?`<path d="M${rear+3} -13 V-33 M${rear-9} -34 h31" stroke="#344566" stroke-width="4" stroke-linecap="round"/><path d="M-29 -5 H26" stroke="#FFF8DE" stroke-width="8"/><circle cx="-2" cy="-2" r="10" fill="#FFF8DE"/><text x="-2" y="3" font-size="14" text-anchor="middle" fill="#344566" font-family="Fredoka,sans-serif">8</text>`:
-        `<path d="M-3 -3 h8 M13 -9 V12" stroke="#577C94" stroke-width="2" stroke-linecap="round"/>`;
+      const cabX=front-43;
+      art+=vehicleRect(cabX,-w/2+4,34,w-8,5,color,edge)+vehicleRect(front-16,-w/2+7,7,w-14,2,'#75B7D5');
+      if(id==='ambulance') art+=vehicleRect(rear+4,-w/2+4,l-50,w-8,6,'#FFFDF6',edge)+vehicleLine(`M${rear+12} -22 H${cabX-14} M${rear+12} 22 H${cabX-14}`,'#E44651',5)+rescueCross(-26,0)+roofBeacon(cabX-8);
+      if(id==='firetruck') art+=vehicleRect(rear+5,-w/2+4,l-52,w-8,5,'#C52B2B',edge)+vehicleLadder(rear+12,-4,l-67)+roofBeacon(cabX-6);
+      if(id==='lorry') art+=vehicleRect(rear+3,-w/2+2,l-51,w-4,3,'#EFA03B',edge)+vehicleLine(`M${rear+10} -18 H${cabX-14} M${rear+10} 18 H${cabX-14}`,'#FFDE8C',3);
+      if(id==='tanker') art+=vehicleRect(rear+4,-w/2+3,l-52,w-6,26,'#B4D2DF',edge)+vehicleLine(`M${rear+20} -16 H${cabX-18}`,'#EFF8FB',4)+vehicleLine(`M${rear+34} -25 v50 M${cabX-25} -25 v50`,'#668CA0',4)+vehicleRect(-31,-9,18,18,4,'#F4BB3F');
     }
+    return art+vehicleRect(front-7,-w/2+7,5,10,2,'#FFF2B5')+vehicleRect(front-7,w/2-17,5,10,2,'#FFF2B5')+vehicleRect(rear+2,-w/2+8,4,8,2,'#C53840')+vehicleRect(rear+2,w/2-16,4,8,2,'#C53840');
+  }
+  // The workshop builds eight independent layers; the drive uses the overhead drawing.
+  function carParts(c){
+    const {length:l,id,color}=c,front=l/2,rear=-front,axle=l*.3,edge='#49697B',compact=!!c.cabin;
+    const wheel=x=>`<circle cx="${x}" cy="21" r="14" fill="#344566"/><circle cx="${x}" cy="21" r="8" fill="#D5E4ED"/><circle cx="${x}" cy="21" r="3" fill="#859EAF"/>`+vehicleLine(`M${x-5} 16 l10 10 M${x+5} 16 l-10 10`,'#92A9B9',1.5);
+    const bodyPath=`M${rear+5} -10 H${front-16} Q${front} -8 ${front} 1 V13 Q${front} 18 ${front-5} 18 H${axle+16} Q${axle+16} 3 ${axle} 3 Q${axle-16} 3 ${axle-16} 18 H${-axle+16} Q${-axle+16} 3 ${-axle} 3 Q${-axle-16} 3 ${-axle-16} 18 H${rear+4} Q${rear} 18 ${rear} 11 V-3 Q${rear} -10 ${rear+5} -10Z`;
+    const body=compact?vehiclePath(bodyPath,color,edge)+vehicleLine(`M${rear+9} -5 H${front-21}`,'#FFFFFF66',2.5):vehicleRect(rear,1,l,14,5,color,edge);
+    let cabin,windows,details;
+    if(compact){
+      const cabRear=id==='pickup'?-5:rear+31,cabFront=id==='pickup'?39:front-32,roof=-34;
+      cabin=vehiclePath(`M${cabRear-11} -9 L${cabRear+4} ${roof+7} Q${cabRear+10} ${roof} ${cabRear+19} ${roof} H${cabFront-17} Q${cabFront-10} ${roof} ${cabFront-6} ${roof+8} L${cabFront+9} -9Z`,id==='police'?'#F5F9FF':color,edge);
+      if(id==='sedan')cabin+=vehicleLine(`M${cabRear+11} ${roof+1} H${cabFront-17}`,'#F2F7FF',4);
+      const left=cabRear+7,right=cabFront-1,mid=(left+right)/2;
+      windows=vehiclePath(`M${left-5} -13 L${left+6} ${roof+7} H${mid-3} V-13Z M${mid+2} ${roof+7} H${right-9} L${right+4} -13 H${mid+2}Z`,'#C6EAF3','#6E96AD')+vehicleLine(`M${cabFront+5} -10 h9`,'#5C7685',3);
+      details=id==='pickup'?vehiclePath(`M${rear+5} -19 H-16 V5 H${rear+5}Z`,'#C8312A','#B57762')+vehicleLine(`M${rear+10} -12 H-22`,'#F4C6AD'):
+        id==='police'?vehicleRect(-22,-10,47,23,3,'#F5F9FF')+vehiclePath('M1 -7 L4 -1 11 0 6 5 7 11 1 8 -5 11 -4 5 -9 0 -2 -1Z','#E9AF39')+vehicleBeacon(-10,-37):
+        vehicleLine('M-3 -3 h8 M13 -9 V12','#577C94');
+    }else if(id==='bus'){
+      cabin=vehicleRect(rear,-47,l,50,9,color,edge);
+      windows=Array.from({length:5},(_,i)=>vehicleGlass(rear+9+i*25,-38,20,22)).join('')+vehicleGlass(front-30,-38,21,37);
+      details=vehicleLine(`M${rear+8} -9 H${front-34}`,'#E77F25',4)+vehicleLine(`M${front-20} -37 V1`,'#5C8197')+vehicleRect(rear+9,-4,12,5,2,'#FFF1A8');
+    }else{
+      const cabX=front-44;
+      cabin=vehiclePath(`M${cabX} 2 V-42 Q${cabX} -46 ${cabX+6} -46 H${front-14} L${front} -18 V2Z`,color,edge);
+      windows=vehiclePath(`M${cabX+8} -38 H${front-17} L${front-6} -20 H${cabX+8}Z`,'#C6EAF3','#5C8197')+vehicleLine(`M${cabX+9} -13 h7`,'#5C7685');
+      if(id==='ambulance'){
+        cabin+=vehicleRect(rear,-51,l-47,54,7,'#FFFDF3',edge);
+        windows+=vehicleGlass(rear+9,-41,23,16);
+        details=vehicleLine(`M${rear+4} -13 H${front-5}`,'#DD4356',6)+rescueCross(-22,-31)+vehicleBeacon(cabX+8,-48);
+      }else if(id==='firetruck'){
+        cabin+=vehicleRect(rear,-40,l-48,43,5,'#D33132',edge);
+        details=vehicleRect(rear+10,-31,29,28,3,'#B7CFDB',edge)+vehicleRect(rear+45,-31,29,28,3,'#B7CFDB',edge)+vehicleLine(`M${rear+14} -23 h21 M${rear+14} -15 h21 M${rear+49} -23 h21 M${rear+49} -15 h21`,'#7F9CAD')+vehicleLadder(rear+8,-52,l-63)+vehicleBeacon(cabX+8,-48);
+      }else if(id==='lorry'){
+        cabin+=vehicleRect(rear,-54,l-49,57,4,'#EFA03B',edge);
+        details=vehicleLine(`M${rear+8} -45 H${cabX-12} M${rear+8} -4 H${cabX-12}`,'#FFDC90',3)+vehicleLine(`M${rear+18} -42 v34 M${rear+42} -42 v34 M${rear+66} -42 v34`,'#C97727',2);
+      }else{
+        cabin+=vehicleRect(rear,-42,l-49,44,22,'#B4D2DF',edge);
+        details=vehicleLine(`M${rear+18} -34 H${cabX-20}`,'#F1F8FA',4)+vehicleLine(`M${rear+32} -40 v40 M${cabX-26} -40 v40`,'#668CA0',4)+vehiclePath('M-29 -31 L-16 -18 -29 -5 -42 -18Z','#F5BE43','#A87C25')+vehiclePath('M-29 -26 Q-30 -21 -25 -19 Q-23 -13 -29 -12 Q-35 -13 -33 -19 Q-30 -18 -29 -26Z','#354C60');
+      }
+    }
+    const extraAxle=id==='lorry'||id==='tanker';
     return [
-      `<rect x="${rear+6}" y="8" width="${c.length-12}" height="8" rx="4" fill="#A6B7BD" stroke="#7B919E" stroke-width="2"/>`,
-      wheel(-axle),wheel(axle),
-      `<path d="${body}" fill="${c.color}" stroke="#5C7685" stroke-width="2"/><path d="M${rear+9} -5 H${front-21}" stroke="#FFFFFF" stroke-opacity=".4" stroke-width="2.5" stroke-linecap="round"/>`,
-      cabin,windows,
-      `<rect x="${front-10}" y="-5" width="8" height="8" rx="3" fill="#FFF1B5"/><rect x="${rear+1}" y="-5" width="6" height="8" rx="2" fill="#D87B77"/><path d="M${front-7} 12 h9 M${rear-1} 12 h7" stroke="#8DA6B4" stroke-width="3" stroke-linecap="round"/>`,
-      details
+      vehicleRect(rear+6,8,l-12,8,4,'#A6B7BD','#7B919E'),
+      wheel(-axle-(extraAxle?10:0))+(extraAxle?wheel(-axle+17):''),wheel(axle),body,cabin,windows,
+      vehicleRect(front-10,-5,8,8,3,'#FFF1B5')+vehicleRect(rear+1,-5,6,8,2,'#D87B77')+vehicleLine(`M${front-7} 12 h9 M${rear-1} 12 h7`,'#8DA6B4',3),details
     ];
   }
   function carArt(c,built=8){
@@ -1687,10 +1712,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   }
   function renderCarPicker(){
     $('#car-options').hidden=settings.version!=='car';
-    $('#car-pick-label').textContent=settings.lang==='sv'?'Dagens bil':'Today’s car';
+    $('#car-pick-label').textContent=settings.lang==='sv'?'Dagens fordon':'Today’s vehicle';
     document.querySelectorAll('[data-car]').forEach(b=>{
-      const c=CARS.find(c=>c.id===b.dataset.car);
-      b.setAttribute('aria-pressed',String(c.id===selectedCar().id));
+      const c=VEHICLES.find(c=>c.id===b.dataset.car);
+      b.setAttribute('aria-pressed',String(c.id===selectedVehicle().id));
       b.querySelector('small').textContent=c[settings.lang];
       b.setAttribute('aria-label',c[settings.lang]);
     });
@@ -1700,7 +1725,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     document.body.classList.toggle('car-version',active);$('#car-caption').hidden=!active;renderCarPicker();
     if(!active||carMoving) return;
     const items=steps(),completed=items.filter(s=>doneList().includes(s.id));
-    const built=items.length?Math.floor(completed.length*8/items.length):0,c=selectedCar();
+    const built=items.length?Math.floor(completed.length*8/items.length):0,c=selectedVehicle();
     let out=`<svg viewBox="0 0 600 320" xmlns="http://www.w3.org/2000/svg"><g id="car-road" opacity=".35"><path id="car-course" d="${carCourse}" fill="none" stroke="#BDCFBD" stroke-width="40" stroke-linejoin="round"/><path d="${carCourse}" fill="none" stroke="#71888E" stroke-width="30"/><path d="${carCourse}" fill="none" stroke="#F8F5DB" stroke-width="2" stroke-dasharray="8 10"/><path d="M103 203 V227 M109 203 V227 M115 203 V227" stroke="#F9F9E8" stroke-width="4"/></g>`;
     out+=`<g id="car-workshop">
       <rect x="185" y="95" width="230" height="126" rx="18" fill="#F9F7EB" fill-opacity=".95" stroke="#AEC3BB" stroke-width="2"/>
@@ -1709,7 +1734,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       <path d="M183 99 H417" stroke="#A4AAA6" stroke-width="6" stroke-linecap="round"/>
       <path d="M202 120 h22 M202 120 v22 M398 212 h-22 M398 212 v-22" fill="none" stroke="#A6BEB5" stroke-width="3"/>
     </g>`;
-    out+=`<g id="car-vehicle" transform="translate(300 166)"><g id="car-art" transform="scale(1.3)">${carArt(c,built)}</g></g>`;
+    out+=`<g id="car-vehicle" transform="translate(300 166)"><g id="car-art" transform="scale(${vehicleWorkshopScale(c)})">${carArt(c,built)}</g></g>`;
     items.forEach((task,i)=>{const x=300+(i-(items.length-1)/2)*39,done=doneList().includes(task.id);out+=`<g transform="translate(${x} 288)"><circle r="16" fill="${done?'#FFF8DE':'#FFFFFF'}" fill-opacity="${done?1:.3}" stroke="${done?'#69AE92':'#A9C2B8'}" stroke-width="2"/>${done?`<svg x="-12" y="-12" width="24" height="24">${task.icon}</svg>`:''}</g>`;});
     out+='</svg>';$('#car-scene').innerHTML=out;
     const caption=settings.lang==='sv'?`${c.sv} · ${completed.length} av ${items.length} byggsteg klara`:`${c.en} · ${completed.length} of ${items.length} build steps done`;
@@ -1749,7 +1774,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     $('#car-road').setAttribute('opacity','.95');$('#car-workshop').setAttribute('opacity','0');
     const path=$('#car-course'),vehicle=$('#car-vehicle'),art=$('#car-art'),length=path.getTotalLength();
     // Change to the overhead drawing only for the road sequence.
-    art.innerHTML=carTopParts(selectedCar()).join('');
+    const model=selectedVehicle(),workshopScale=vehicleWorkshopScale(model),driveScale=Math.min(.55,80/model.length);
+    art.innerHTML=vehicleTopArt(model);
     const first=path.getPointAtLength(0),q=path.getPointAtLength(.5),startAngle=Math.atan2(q.y-first.y,q.x-first.x)*180/Math.PI;
     const started=performance.now(),reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
     // Engine sound uses the existing on-device sound setting and synthesis engine.
@@ -1758,7 +1784,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     function frame(now){
       const elapsed=now-started;
       if(elapsed<650){
-        const u=elapsed/650;vehicle.setAttribute('transform',`translate(${300+(first.x-300)*u} ${166+(first.y-166)*u}) rotate(${startAngle*u})`);art.setAttribute('transform',`scale(${1.3-.75*u})`);
+        const u=elapsed/650;vehicle.setAttribute('transform',`translate(${300+(first.x-300)*u} ${166+(first.y-166)*u}) rotate(${startAngle*u})`);art.setAttribute('transform',`scale(${workshopScale+(driveScale-workshopScale)*u})`);
       }else if(elapsed<650+driveMs){
         const u=(elapsed-650)/driveMs,d=length*(u*u*(3-2*u)),p=path.getPointAtLength(d),prev=path.getPointAtLength(Math.max(0,d-.5)),next=path.getPointAtLength(Math.min(length,d+.5));
         vehicle.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${Math.atan2(next.y-prev.y,next.x-prev.x)*180/Math.PI})`);
@@ -1769,9 +1795,9 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     }
     requestAnimationFrame(frame);
   }
-  CARS.forEach(c=>{
+  VEHICLES.forEach(c=>{
     const b=document.createElement('button');b.type='button';b.dataset.car=c.id;
-    b.innerHTML=`<svg viewBox="-90 -60 180 108" aria-hidden="true">${carArt(c)}</svg><small></small>`;
+    b.innerHTML=`<svg viewBox="-92 -65 184 106" aria-hidden="true">${carArt(c)}</svg><small></small>`;
     b.addEventListener('click',()=>mutate(()=>{day.carType=c.id;save('mf_day',day);renderCar();SFX.click();}));
     $('#car-picker').appendChild(b);
   });
