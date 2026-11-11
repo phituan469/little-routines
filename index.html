@@ -1861,7 +1861,22 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       case 'steam':
         art=`<rect x="-29" y="-60" width="29" height="48" rx="5" fill="${c}" stroke="${stroke}" stroke-width="2"/>${win(-24,-53,19,19)}<rect x="-4" y="-39" width="35" height="27" rx="9" fill="${a}" stroke="${stroke}" stroke-width="2"/><path d="M-33 -61 H5 M18 -40 V-57 H28 V-40" fill="#8399AF" stroke="${stroke}" stroke-width="4" stroke-linejoin="round"/><path d="M29 -17 L38 -8 H24" fill="#E3957B"/><circle cx="29" cy="-27" r="4" fill="#FFF0B5"/>`;break;
       case 'passenger':
-        art=`<path d="M-30 -13 V-45 Q-30 -53 -22 -53 H8 Q31 -48 34 -24 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-29 -22 H33" stroke="${a}" stroke-width="7"/>${win(-23,-44)}${win(-3,-44)}<path d="M17 -44 Q27 -37 28 -29 H17Z" fill="#DDF3F8"/><circle cx="32" cy="-20" r="3" fill="#FFF0B5"/>`;break;
+        art=`<path d="M-30 -13 V-45 Q-30 -53 -22 -53 H8 Q31 -48 34 -24 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-29 -22 H33" stroke="${a}" stroke-width="7"/>${win(-23,-44)}${win(-3,-44)}<path d="M17 -44 Q27 -37 28 -29 H17Z" fill="#DDF3F8"/><circle cx="32" cy="-20" r="3" fill="#FFF0B5"/>
+          <g class="train-conductor" opacity="0" aria-hidden="true">
+            <rect x="-8" y="-47" width="30" height="26" rx="4" fill="#2C4866" stroke="#DDF3F8" stroke-width="1.5"/>
+            <g class="train-conductor-person">
+              <path d="M-4 -22 V-27 Q2 -34 10 -27 V-22Z" fill="#70C6EC"/>
+              <circle cx="3" cy="-36" r="6" fill="#F5BC88"/>
+              <path d="M-4 -40 Q-2 -48 7 -45 L11 -40 L12 -38 H-5Z" fill="#182D4B"/>
+              <path d="M-3 -40 H9" stroke="#F2B945" stroke-width="1.5"/>
+              <path d="M1 -35 h.1 M6 -35 h.1 M1 -32 Q3 -30 6 -32" fill="none" stroke="#713F3C" stroke-width="1.25" stroke-linecap="round"/>
+              <g transform="translate(10 -25)"><g class="train-conductor-hand">
+                <path d="M0 0 Q5 -2 7 -9" fill="none" stroke="#70C6EC" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="7" cy="-10" r="2.8" fill="#F5BC88"/>
+              </g></g>
+            </g>
+            <path d="M-8 -22 H22" stroke="#DDF3F8" stroke-width="2" stroke-linecap="round"/>
+          </g>`;break;
       case 'goods':
         art=`<rect x="-29" y="-49" width="25" height="36" rx="3" fill="${a}" stroke="${stroke}" stroke-width="2"/>${win(-25,-44,17,16)}<rect x="-3" y="-35" width="36" height="22" rx="4" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M5 -30 v12 M12 -30 v12 M19 -30 v12 M26 -30 v12 M-30 -51 H-2" stroke="#9B725D" stroke-width="3"/><path d="M-30 -13 H34" stroke="#5C7685" stroke-width="4"/>`;break;
       case 'bullet':
@@ -1881,7 +1896,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const c=t.id==='toy'?['#F43F9C','#258FF2','#FFD128','#20BB70'][i%4]:t.color;
     let art='';
     if(t.id==='goods'){
-      art=`<path d="M-30 -12 H30" stroke="#6F7C87" stroke-width="5"/><rect x="-21" y="-57" width="22" height="18" rx="2" fill="#FFC827"/><rect x="2" y="-60" width="22" height="21" rx="2" fill="#E54D42"/><rect x="-26" y="-39" width="52" height="25" rx="3" fill="${i%2?t.accent:c}" stroke="#96745C" stroke-width="2"/><path d="M-21 -47 H21 M-21 -20 H21 M-18 -47 v27 M18 -47 v27" stroke="#B5896E" stroke-width="2"/>`;
+      art=`<path d="M-30 -12 H30" stroke="#6F7C87" stroke-width="5"/>
+        <g class="train-crate"><rect x="-23" y="-57" width="22" height="20" rx="2" fill="#FFC827" stroke="#AA702A" stroke-width="1.5"/><path d="M-19 -53 l14 12" stroke="#FFE99D" stroke-width="2"/></g>
+        <g class="train-crate"><rect x="2" y="-60" width="22" height="23" rx="2" fill="#E54D42" stroke="#A2433F" stroke-width="1.5"/><path d="M6 -56 l14 15" stroke="#FFAD80" stroke-width="2"/></g>
+        <rect x="-26" y="-39" width="52" height="25" rx="3" fill="${i%2?t.accent:c}" stroke="#96745C" stroke-width="2"/><path d="M-21 -47 H21 M-21 -20 H21 M-18 -47 v27 M18 -47 v27" stroke="#B5896E" stroke-width="2"/>`;
     }else if(t.id==='steam'){
       art=`<rect x="-27" y="-48" width="54" height="35" rx="5" fill="${t.accent}" stroke="#7F8C7D" stroke-width="2"/><path d="M-31 -49 Q0 -61 31 -49" fill="${c}" stroke="#5C7685" stroke-width="3"/>`;
     }else if(t.id==='bullet'){
@@ -1992,33 +2010,68 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     }
     return best;
   }
-  function trainExhaust(layer,exhaust,size){
-    const lifetime=1200;
-    layer.innerHTML=Array.from({length:Math.ceil(lifetime/exhaust.interval)+1},()=>`<g class="train-puff" fill="${exhaust.color}" opacity="0">
-      <circle cx="-4" cy="1" r="5.5"/><circle cx="3" cy="0" r="6"/><circle cx="0" cy="-4" r="5" fill="${exhaust.highlight}"/>
-    </g>`).join('');
-    const puffs=[...layer.children].map(node=>({node,born:null}));
+  function trainTrail(layer,size,{x,y,interval,lifetime,rise,particle}){
+    layer.innerHTML=Array.from({length:Math.ceil(lifetime/interval)+1},(_,i)=>particle(i)).join('');
+    const particles=[...layer.children].map(node=>({node,born:null}));
     const {left,right}=$('#train-tunnel').dataset;
     const tunnelLeft=Number(left),tunnelRight=Number(right);
     let next=0,cursor=0;
     return (elapsed,pose,angle)=>{
       if(elapsed>=next){
-        next=elapsed+exhaust.interval;
-        // Leave the chimney quiet while the engine is inside the tunnel.
+        next=elapsed+interval;
+        // Don't emit from a train part while it's under the tunnel roof.
         if(!(pose.y>=TRAIN_BOTTOM.y-2&&pose.x>=tunnelLeft&&pose.x<=tunnelRight)){
-          const x=-exhaust.x*size,y=exhaust.y*size,cos=Math.cos(angle),sin=Math.sin(angle);
-          Object.assign(puffs[cursor],{born:elapsed,x:pose.x+x*cos-y*sin,y:pose.y+x*sin+y*cos,drift:18*cos});
-          cursor=(cursor+1)%puffs.length;
+          const cos=Math.cos(angle),sin=Math.sin(angle);
+          Object.assign(particles[cursor],{born:elapsed,x:pose.x+size*(x*cos-y*sin),y:pose.y+size*(x*sin+y*cos),drift:18*cos});
+          cursor=(cursor+1)%particles.length;
         }
       }
-      puffs.forEach(puff=>{
-        if(puff.born===null)return;
-        const age=(elapsed-puff.born)/lifetime;
-        if(age>=1){puff.born=null;puff.node.setAttribute('opacity','0');return;}
-        puff.node.setAttribute('transform',`translate(${puff.x+puff.drift*age} ${puff.y-40*age}) scale(${.42+age*1.05})`);
-        puff.node.setAttribute('opacity',String(.92*(1-age*age)));
+      particles.forEach(p=>{
+        if(p.born===null)return;
+        const age=(elapsed-p.born)/lifetime;
+        if(age>=1){p.born=null;p.node.setAttribute('opacity','0');return;}
+        p.node.setAttribute('transform',`translate(${p.x+p.drift*age} ${p.y-rise*age}) scale(${.42+age*1.05})`);
+        p.node.setAttribute('opacity',String(.92*(1-age*age)));
       });
     };
+  }
+  function trainExhaust(layer,exhaust,size){
+    return trainTrail(layer,size,{x:-exhaust.x,y:exhaust.y,interval:exhaust.interval,lifetime:1200,rise:40,
+      particle:()=>`<g class="train-puff" fill="${exhaust.color}" opacity="0">
+        <circle cx="-4" cy="1" r="5.5"/><circle cx="3" cy="0" r="6"/><circle cx="0" cy="-4" r="5" fill="${exhaust.highlight}"/>
+      </g>`});
+  }
+  function toyTrainStars(layer,size){
+    const colors=['#FFD242','#FF83BB','#6DE2EE','#B79AFF'];
+    return trainTrail(layer,size,{x:36,y:-24,interval:190,lifetime:780,rise:20,
+      particle:i=>`<path class="train-star" opacity="0" d="M0 -8 L2.4 -2.7 8 -2.5 3.8 1.4 5 7 0 4.2 -5 7 -3.8 1.4 -8 -2.5 -2.4 -2.7Z" fill="${colors[i%colors.length]}" stroke="#FFF7DB" stroke-width="1.4" stroke-linejoin="round"/>`});
+  }
+  function trainConductorWave(engine){
+    const cab=engine.querySelector('.train-conductor'),person=cab.querySelector('.train-conductor-person'),hand=cab.querySelector('.train-conductor-hand');
+    let previous=0;
+    return pose=>{
+      const phase=(350-pose.x)/205;
+      const opacity=Math.abs(pose.y-110)<.2?unitProgress(Math.min(phase,1-phase)*6):0;
+      if(!opacity&&!previous)return;
+      previous=opacity;
+      cab.setAttribute('opacity',String(opacity));
+      person.setAttribute('transform',`translate(0 ${(1-opacity)*5})`);
+      hand.setAttribute('transform',`rotate(${Math.sin(phase*4*Math.PI)*27})`);
+    };
+  }
+  function freightBounces(vehicles,length,size){
+    const exit=Number($('#train-tunnel').dataset.right)-TRAIN_BOTTOM.left+34*size;
+    return new Map(vehicles.map(v=>{
+      const crates=[...v.querySelectorAll('.train-crate')];
+      return [v,d=>{
+        const afterExit=(d-exit+length)%length;
+        crates.forEach((crate,i)=>{
+          const u=unitProgress((afterExit-i*18)/174),lift=u>0&&u<1?Math.sin(Math.PI*u)**2*(i?13:16):0;
+          if(lift)crate.setAttribute('transform',`translate(0 ${-lift})`);
+          else if(crate.hasAttribute('transform'))crate.removeAttribute('transform');
+        });
+      }];
+    }));
   }
   function trainBoarding(layer,coachX,size){
     const doorX=coachX+22*size,doorY=110-13*size,platformY=142;
@@ -2059,7 +2112,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const travelMs=TRAIN_LAPS*TRAIN_LAP_MS/(train.lapSpeed||1),pauseMs=train.boarding?TRAIN_STOP_MS:0;
     const stop=train.boarding?trainRouteAnchor(path,length,TRAIN_STOP_X,110):start;
     const stopDistance=(stop-start+length)%length,stopMs=travelMs*stopDistance/totalDistance;
-    const smoke=train.exhaust?trainExhaust(layer,train.exhaust,size):null;
+    const trail=train.exhaust?trainExhaust(layer,train.exhaust,size):train.id==='toy'?toyTrainStars(layer,size):null;
+    const emitter=train.id==='toy'?vehicles[vehicles.length-2]:engine;
+    const wave=train.id==='passenger'?trainConductorWave(engine):null;
+    const freight=train.id==='goods'?freightBounces(vehicles.slice(0,-1),length,size):null;
     const board=train.boarding?trainBoarding(layer,path.getPointAtLength(stop).x+Number(vehicles[0].dataset.offset),size):null;
     if(board)board(0);
     const t0=performance.now();
@@ -2079,7 +2135,9 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
         // Rotate the left-facing artwork so the wheels stay aligned on turns.
         const angle=Math.atan2(q.y-p.y,q.x-p.x)-Math.PI;
         v.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${angle*180/Math.PI})`);
-        if(smoke&&v===engine)smoke(elapsed,p,angle);
+        if(trail&&v===emitter)trail(elapsed,p,angle);
+        if(wave&&v===engine)wave(p);
+        freight?.get(v)?.(d);
       });
       if(elapsed<travelMs+pauseMs)requestAnimationFrame(frame);
       else {trainMoving=false;renderScenes();cb();}
