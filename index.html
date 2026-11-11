@@ -747,13 +747,13 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     {id:'tanker',en:'Gas tanker',sv:'Tankbil',color:'#6FA94D',length:168,width:64}
   ];
   const TRAINS = [
-    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#EE4F43',accent:'#FFCF28'},
+    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#EE4F43',accent:'#FFCF28',exhaust:{x:23,y:-58,color:'#C3CAD1',highlight:'#E2E6EA',interval:260}},
     {id:'passenger',en:'Passenger',sv:'Persontåg',color:'#258FF2',accent:'#FFF1C4'},
     {id:'goods',en:'Goods',sv:'Godståg',color:'#FF962B',accent:'#43B76B'},
-    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#F5F8FA',accent:'#216EE8'},
-    {id:'metro',en:'Metro',sv:'Tunnelbana',color:'#9950E8',accent:'#5AE2DF'},
-    {id:'tram',en:'Tram',sv:'Spårvagn',color:'#20BB70',accent:'#FFD73D'},
-    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#10BAC9',accent:'#FA733B'},
+    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#F5F8FA',accent:'#216EE8',lapSpeed:1.3},
+    {id:'metro',en:'Metro',sv:'Tunnelbana',color:'#9950E8',accent:'#5AE2DF',boarding:true},
+    {id:'tram',en:'Tram',sv:'Spårvagn',color:'#20BB70',accent:'#FFD73D',boarding:true},
+    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#10BAC9',accent:'#FA733B',exhaust:{x:-3,y:-60,color:'#23262C',highlight:'#424650',interval:350}},
     {id:'toy',en:'Toy train',sv:'Leksakståg',color:'#F43F9C',accent:'#FFD128'}
   ];
   const DEFAULT_ROUTINES = { morning:['pee','teeth','water','food','water','poop'], night:['food','water','pee','teeth'] };
@@ -1707,8 +1707,15 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       vehicleRect(front-10,-5,8,8,3,'#FFF1B5')+vehicleRect(rear+1,-5,6,8,2,'#D87B77')+vehicleLine(`M${front-7} 12 h9 M${rear-1} 12 h7`,'#8DA6B4',3),details
     ];
   }
-  function carArt(c,built=8){
-    return carParts(c).map((art,i)=>`<g class="car-part" data-part="${i}" data-built="${i<built}" opacity="${i<built?1:.055}">${art}</g>`).join('');
+  function carArt(c,built=8,workshop=false){
+    const parts=carParts(c);
+    // Trace the combined silhouette so internal seams don't turn into extra outlines.
+    const outline=workshop?`<defs><filter id="car-silhouette" x="-10%" y="-15%" width="120%" height="130%">
+      <feMorphology in="SourceAlpha" operator="dilate" radius="1.7" result="edge"/>
+      <feComposite in="edge" in2="SourceAlpha" operator="out" result="rim"/>
+      <feFlood flood-color="#536B7C" flood-opacity=".72"/><feComposite in2="rim" operator="in"/>
+    </filter></defs><g id="car-outline" aria-hidden="true" opacity="${built<8?1:0}" filter="url(#car-silhouette)">${parts.join('')}</g>`:'';
+    return outline+parts.map((art,i)=>`<g class="car-part" data-part="${i}" data-built="${i<built}" opacity="${i<built?1:.055}">${art}</g>`).join('');
   }
   function renderCarPicker(){
     $('#car-options').hidden=settings.version!=='car';
@@ -1734,7 +1741,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       <path d="M183 99 H417" stroke="#A4AAA6" stroke-width="6" stroke-linecap="round"/>
       <path d="M202 120 h22 M202 120 v22 M398 212 h-22 M398 212 v-22" fill="none" stroke="#A6BEB5" stroke-width="3"/>
     </g>`;
-    out+=`<g id="car-vehicle" transform="translate(300 166)"><g id="car-art" transform="scale(${vehicleWorkshopScale(c)})">${carArt(c,built)}</g></g>`;
+    out+=`<g id="car-vehicle" transform="translate(300 166)"><g id="car-art" transform="scale(${vehicleWorkshopScale(c)})">${carArt(c,built,true)}</g></g>`;
     items.forEach((task,i)=>{const x=300+(i-(items.length-1)/2)*39,done=doneList().includes(task.id);out+=`<g transform="translate(${x} 288)"><circle r="16" fill="${done?'#FFF8DE':'#FFFFFF'}" fill-opacity="${done?1:.3}" stroke="${done?'#69AE92':'#A9C2B8'}" stroke-width="2"/>${done?`<svg x="-12" y="-12" width="24" height="24">${task.icon}</svg>`:''}</g>`;});
     out+='</svg>';$('#car-scene').innerHTML=out;
     const caption=settings.lang==='sv'?`${c.sv} · ${completed.length} av ${items.length} byggsteg klara`:`${c.en} · ${completed.length} of ${items.length} build steps done`;
@@ -1758,6 +1765,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const n=steps().length,k=steps().filter(s=>doneList().includes(s.id)).length;
     const before=Math.floor((k-1)*8/n),after=Math.floor(k*8/n);
     const parts=[...document.querySelectorAll('#car-art .car-part')].slice(before,after);
+    const outline=$('#car-outline');outline.setAttribute('opacity','1');
     parts.forEach(el=>el.setAttribute('opacity','.055'));
     const a=document.querySelectorAll('.step .knob')[i].getBoundingClientRect(),b=$('#car-art').getBoundingClientRect();
     const icon=document.createElement('div');icon.className='train-flying-icon';icon.innerHTML=steps()[i].icon;icon.style.left=a.left+'px';icon.style.top=a.top+'px';document.body.appendChild(icon);
@@ -1767,7 +1775,10 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       icon.remove();
       parts.forEach((el,j)=>{el.setAttribute('opacity','1');el.style.transformOrigin='0px 0px';el.animate([{opacity:0,translate:'0 -20px',scale:'.7'},{opacity:1,translate:'0 0',scale:'1.15'},{opacity:1,translate:'0 0',scale:'1'}],{duration:900,delay:j*110,easing:'ease-out',fill:'backwards'});tone(523+j*70,.16,{vol:.08,when:j*.11});});
     },850);
-    setTimeout(()=>vehicleWiggle($('#car-art'),()=>{carMoving=false;cb();}),2000+Math.max(0,parts.length-1)*110);
+    setTimeout(()=>{
+      if(after===8)outline.setAttribute('opacity','0');
+      vehicleWiggle($('#car-art'),()=>{carMoving=false;cb();});
+    },2000+Math.max(0,parts.length-1)*110);
   }
   function carDrive(cb){
     carMoving=true;
@@ -1805,7 +1816,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   /* ---------- Train adventure ---------- */
   const trainPath = 'M70 225 H530 Q570 225 570 185 V150 Q570 110 530 110 H70 Q30 110 30 150 V185 Q30 225 70 225';
   const TRAIN_BOTTOM = {left:70,right:530,y:225};
-  const TRAIN_LAPS = 2, TRAIN_LAP_MS = 4800;
+  const TRAIN_LAPS = 2, TRAIN_LAP_MS = 4800, TRAIN_STOP_MS = 2100;
+  const TRAIN_STOP_X = 300;
   function trainTunnel(){
     const length=(TRAIN_BOTTOM.right-TRAIN_BOTTOM.left)/3;
     const right=TRAIN_BOTTOM.right-10,left=right-length;
@@ -1859,7 +1871,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       case 'tram':
         art=`<rect x="-30" y="-50" width="61" height="37" rx="5" fill="${c}" stroke="${stroke}" stroke-width="2"/><path d="M-34 -51 H34 M-6 -53 L3 -66 13 -54 M-2 -67 H19" fill="none" stroke="#647C90" stroke-width="3" stroke-linecap="round"/><path d="M-29 -22 H30" stroke="${a}" stroke-width="7"/>${win(-25,-43,12,16)}${win(-8,-43,12,16)}${win(10,-43,15,16)}`;break;
       case 'diesel':
-        art=`<path d="M-29 -13 V-43 H-12 V-55 H12 L24 -42 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="-31" y="-34" width="18" height="21" rx="3" fill="${a}"/><path d="M-11 -55 H13 L27 -42" fill="none" stroke="${stroke}" stroke-width="3"/>${win(-6,-49,14,15)}<path d="M12 -49 L20 -41 V-34 H12Z" fill="#DDF3F8"/><path d="M-24 -29 v11 M-18 -29 v11 M-10 -21 H24" stroke="#8A805E" stroke-width="3"/>`;break;
+        art=`<rect x="-7" y="-60" width="8" height="7" rx="2" fill="#45586C"/><path d="M-29 -13 V-43 H-12 V-55 H12 L24 -42 V-13Z" fill="${c}" stroke="${stroke}" stroke-width="2"/><rect x="-31" y="-34" width="18" height="21" rx="3" fill="${a}"/><path d="M-11 -55 H13 L27 -42" fill="none" stroke="${stroke}" stroke-width="3"/>${win(-6,-49,14,15)}<path d="M12 -49 L20 -41 V-34 H12Z" fill="#DDF3F8"/><path d="M-24 -29 v11 M-18 -29 v11 M-10 -21 H24" stroke="#8A805E" stroke-width="3"/>`;break;
       default:
         art=`<rect x="-29" y="-59" width="28" height="46" rx="8" fill="${c}" stroke="${stroke}" stroke-width="2"/>${win(-23,-51,16,18)}<path d="M-36 -60 Q-15 -83 7 -60Z" fill="${a}" stroke="${stroke}" stroke-width="2"/><rect x="-4" y="-37" width="35" height="24" rx="10" fill="${a}" stroke="${stroke}" stroke-width="2"/><path d="M14 -39 V-54 H24 V-39" fill="#EBC76D" stroke="${stroke}" stroke-width="2"/><circle cx="30" cy="-25" r="6" fill="#FFF0B5"/>`;
     }
@@ -1935,7 +1947,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     completed.forEach((s,i)=>{
       out += `<g class="train-vehicle" data-offset="${(i+1)*gap}" transform="translate(${132+(i+1)*gap} 110)"><g transform="scale(${size})">${trainCarriage(train,s.icon,i)}</g></g>`;
     });
-    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})">${trainEngine(train)}</g></g>${trainTunnel()}</svg>`;
+    out += `<g class="train-vehicle" data-offset="0" transform="translate(132 110)"><g transform="scale(${-size} ${size})">${trainEngine(train)}</g></g><g id="train-effects" aria-hidden="true"></g>${trainTunnel()}</svg>`;
     $('#train-scene').innerHTML = out;
     $('#train-scene').setAttribute('aria-label', train[settings.lang]+`: ${completed.length} / ${items.length}`);
     $('#train-caption').textContent = settings.lang==='sv' ? `${train.sv} · ${completed.length} av ${items.length} vagnar klara` : `${train.en} · ${completed.length} of ${items.length} carriages ready`;
@@ -1970,25 +1982,107 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       },1700);
     },1250);
   }
+  const trainEase=u=>u*u*(3-2*u);
+  const unitProgress=u=>Math.max(0,Math.min(1,u));
+  function trainRouteAnchor(path,length,x,y){
+    let best=0, nearest=Infinity;
+    for(let d=0;d<length;d+=.25){
+      const p=path.getPointAtLength(d),error=(p.x-x)**2+(p.y-y)**2;
+      if(error<nearest){nearest=error;best=d;}
+    }
+    return best;
+  }
+  function trainExhaust(layer,exhaust,size){
+    const lifetime=1200;
+    layer.innerHTML=Array.from({length:Math.ceil(lifetime/exhaust.interval)+1},()=>`<g class="train-puff" fill="${exhaust.color}" opacity="0">
+      <circle cx="-4" cy="1" r="5.5"/><circle cx="3" cy="0" r="6"/><circle cx="0" cy="-4" r="5" fill="${exhaust.highlight}"/>
+    </g>`).join('');
+    const puffs=[...layer.children].map(node=>({node,born:null}));
+    const {left,right}=$('#train-tunnel').dataset;
+    const tunnelLeft=Number(left),tunnelRight=Number(right);
+    let next=0,cursor=0;
+    return (elapsed,pose,angle)=>{
+      if(elapsed>=next){
+        next=elapsed+exhaust.interval;
+        // Leave the chimney quiet while the engine is inside the tunnel.
+        if(!(pose.y>=TRAIN_BOTTOM.y-2&&pose.x>=tunnelLeft&&pose.x<=tunnelRight)){
+          const x=-exhaust.x*size,y=exhaust.y*size,cos=Math.cos(angle),sin=Math.sin(angle);
+          Object.assign(puffs[cursor],{born:elapsed,x:pose.x+x*cos-y*sin,y:pose.y+x*sin+y*cos,drift:18*cos});
+          cursor=(cursor+1)%puffs.length;
+        }
+      }
+      puffs.forEach(puff=>{
+        if(puff.born===null)return;
+        const age=(elapsed-puff.born)/lifetime;
+        if(age>=1){puff.born=null;puff.node.setAttribute('opacity','0');return;}
+        puff.node.setAttribute('transform',`translate(${puff.x+puff.drift*age} ${puff.y-40*age}) scale(${.42+age*1.05})`);
+        puff.node.setAttribute('opacity',String(.92*(1-age*age)));
+      });
+    };
+  }
+  function trainBoarding(layer,coachX,size){
+    const doorX=coachX+22*size,doorY=110-13*size,platformY=142;
+    const riders=[{x:10,shirt:'#F6AF38',skin:'#A86546'},{x:27,shirt:'#9B71DF',skin:'#F2B684'},{x:44,shirt:'#35A9C4',skin:'#D79461'}];
+    layer.innerHTML=`<g id="train-platform">
+      <rect x="${doorX-27}" y="${platformY}" width="84" height="9" rx="4" fill="#7D929E"/>
+      <rect x="${doorX-27}" y="${platformY}" width="84" height="4" rx="2" fill="#F7CE72"/>
+      <path d="M${doorX-17} ${platformY+9} v7 M${doorX+46} ${platformY+9} v7" stroke="#6C7F8C" stroke-width="4"/>
+    </g><g id="train-boarding-door" transform="translate(${doorX} ${doorY}) scale(${size})" opacity="0">
+      <rect x="-6" y="-29" width="12" height="29" rx="2" fill="#263950" stroke="#DEE6EB" stroke-width="1.4"/>
+      <path d="M-6 -1 H6" stroke="#FFD672" stroke-width="2"/>
+    </g>${riders.map(r=>`<g class="train-rider">
+      <path d="M-2 -7 v6 M2 -7 v6" stroke="#34465D" stroke-width="2" stroke-linecap="round"/>
+      <rect x="-4.5" y="-13" width="9" height="9" rx="3" fill="${r.shirt}" stroke="#34465D" stroke-width=".8"/>
+      <circle cy="-17" r="3.9" fill="${r.skin}" stroke="#34465D" stroke-width=".8"/>
+    </g>`).join('')}`;
+    const door=layer.querySelector('#train-boarding-door'),people=[...layer.querySelectorAll('.train-rider')];
+    let previous=-1;
+    return progress=>{
+      if(progress===previous)return;
+      previous=progress;
+      door.setAttribute('opacity',String(Math.min(unitProgress(progress*14),unitProgress((1-progress)*14))));
+      people.forEach((person,i)=>{
+        const u=unitProgress((progress-.09-i*.17)/.38),p=trainEase(u);
+        const x=doorX+riders[i].x*(1-p),y=platformY+(doorY-platformY)*p-Math.sin(Math.PI*p)*4;
+        person.setAttribute('transform',`translate(${x} ${y}) scale(${1-.4*p})`);
+        person.setAttribute('opacity',String(unitProgress((1-u)*5)));
+      });
+    };
+  }
   function trainLap(cb){
     trainMoving=true;
-    const path=$('#train-route'), length=path.getTotalLength(), vehicles=[...$('#train-scene').querySelectorAll('.train-vehicle')];
-    // Start at the upper-left station, facing left, with carriages trailing to the right.
-    let start=0, nearest=Infinity;
-    for(let d=0;d<length;d+=.25){ const p=path.getPointAtLength(d), error=(p.x-132)**2+(p.y-110)**2; if(error<nearest){ nearest=error; start=d; } }
+    const path=$('#train-route'),length=path.getTotalLength(),vehicles=[...$('#train-scene').querySelectorAll('.train-vehicle')];
+    const train=selectedTrain(),engine=vehicles[vehicles.length-1],layer=$('#train-effects');
+    const size=engine.firstElementChild.transform.baseVal.getItem(0).matrix.d;
+    // The upper rail runs right to left; the midpoint is reached on the first lap.
+    const start=trainRouteAnchor(path,length,132,110),totalDistance=length*TRAIN_LAPS;
+    const travelMs=TRAIN_LAPS*TRAIN_LAP_MS/(train.lapSpeed||1),pauseMs=train.boarding?TRAIN_STOP_MS:0;
+    const stop=train.boarding?trainRouteAnchor(path,length,TRAIN_STOP_X,110):start;
+    const stopDistance=(stop-start+length)%length,stopMs=travelMs*stopDistance/totalDistance;
+    const smoke=train.exhaust?trainExhaust(layer,train.exhaust,size):null;
+    const board=train.boarding?trainBoarding(layer,path.getPointAtLength(stop).x+Number(vehicles[0].dataset.offset),size):null;
+    if(board)board(0);
     const t0=performance.now();
     tone(880,.45,{type:'sine',vol:.12,to:1046}); tone(1046,.5,{type:'sine',vol:.12,when:.5});
     function frame(now){
-      const u=Math.min(1,(now-t0)/(TRAIN_LAPS*TRAIN_LAP_MS)), distance=start+length*TRAIN_LAPS*(u*u*(3-2*u));
+      const elapsed=now-t0;
+      let traveled=totalDistance*trainEase(unitProgress(elapsed/travelMs));
+      if(board){
+        if(elapsed<stopMs)traveled=stopDistance*trainEase(elapsed/stopMs);
+        else if(elapsed<stopMs+pauseMs)traveled=stopDistance;
+        else traveled=stopDistance+(totalDistance-stopDistance)*trainEase(unitProgress((elapsed-stopMs-pauseMs)/(travelMs-stopMs)));
+        board(unitProgress((elapsed-stopMs)/pauseMs));
+      }
       vehicles.forEach(v=>{
-        const d=((distance-Number(v.dataset.offset))%length+length)%length;
-        const p=path.getPointAtLength(d), q=path.getPointAtLength((d+.5)%length);
-        // At rest the train faces left above the upper rail. Rotate that pose
-        // with the track tangent so its wheels follow the rail through every turn.
-        const angle=Math.atan2(q.y-p.y,q.x-p.x)*180/Math.PI-180;
-        v.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${angle})`);
+        const d=((start+traveled-Number(v.dataset.offset))%length+length)%length;
+        const p=path.getPointAtLength(d),q=path.getPointAtLength((d+.5)%length);
+        // Rotate the left-facing artwork so the wheels stay aligned on turns.
+        const angle=Math.atan2(q.y-p.y,q.x-p.x)-Math.PI;
+        v.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${angle*180/Math.PI})`);
+        if(smoke&&v===engine)smoke(elapsed,p,angle);
       });
-      if(u<1) requestAnimationFrame(frame); else { trainMoving=false; renderScenes(); cb(); }
+      if(elapsed<travelMs+pauseMs)requestAnimationFrame(frame);
+      else {trainMoving=false;renderScenes();cb();}
     }
     requestAnimationFrame(frame);
   }
