@@ -1817,6 +1817,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   const trainPath = 'M70 225 H530 Q570 225 570 185 V150 Q570 110 530 110 H70 Q30 110 30 150 V185 Q30 225 70 225';
   const TRAIN_BOTTOM = {left:70,right:530,y:225};
   const TRAIN_LAPS = 2, TRAIN_LAP_MS = 4800, TRAIN_STOP_MS = 2100;
+  const TRAIN_DEPARTURE_WAVE_MS = 1500;
   const TRAIN_STOP_X = 300;
   function trainTunnel(){
     const length=(TRAIN_BOTTOM.right-TRAIN_BOTTOM.left)/3;
@@ -2049,14 +2050,19 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
   function trainConductorWave(engine){
     const cab=engine.querySelector('.train-conductor'),person=cab.querySelector('.train-conductor-person'),hand=cab.querySelector('.train-conductor-hand');
     let previous=0;
-    return pose=>{
-      const phase=(350-pose.x)/205;
-      const opacity=Math.abs(pose.y-110)<.2?unitProgress(Math.min(phase,1-phase)*6):0;
+    return (elapsed,pose)=>{
+      let opacity=0;
+      if(elapsed<0){
+        opacity=unitProgress(Math.min((elapsed+TRAIN_DEPARTURE_WAVE_MS)/140,-elapsed/140));
+      }else if(Math.abs(pose.y-110)<.2){
+        // Begin on the approach and keep waving past the station.
+        opacity=unitProgress(Math.min((515-pose.x)/42,(pose.x-138)/24));
+      }
       if(!opacity&&!previous)return;
       previous=opacity;
       cab.setAttribute('opacity',String(opacity));
       person.setAttribute('transform',`translate(0 ${(1-opacity)*5})`);
-      hand.setAttribute('transform',`rotate(${Math.sin(phase*4*Math.PI)*27})`);
+      hand.setAttribute('transform',`rotate(${Math.sin(elapsed*2*Math.PI/620)*38})`);
     };
   }
   function freightBounces(vehicles,length,size){
@@ -2066,9 +2072,14 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
       return [v,d=>{
         const afterExit=(d-exit+length)%length;
         crates.forEach((crate,i)=>{
-          const u=unitProgress((afterExit-i*18)/174),lift=u>0&&u<1?Math.sin(Math.PI*u)**2*(i?13:16):0;
-          if(lift)crate.setAttribute('transform',`translate(0 ${-lift})`);
-          else if(crate.hasAttribute('transform'))crate.removeAttribute('transform');
+          const u=(afterExit-i*32)/234;
+          if(u>0&&u<1){
+            // Build to the highest point as the wagon comes around the bend.
+            const phase=u*u;
+            const lift=Math.sin(Math.PI*phase)**2*(i?29:34);
+            const tilt=Math.sin(2*Math.PI*phase)*(i?-18:18);
+            crate.setAttribute('transform',`translate(0 ${-lift}) rotate(${tilt} ${i?13:-12} ${i?-49:-47})`);
+          }else if(crate.hasAttribute('transform'))crate.removeAttribute('transform');
         });
       }];
     }));
@@ -2115,10 +2126,11 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     const trail=train.exhaust?trainExhaust(layer,train.exhaust,size):train.id==='toy'?toyTrainStars(layer,size):null;
     const emitter=train.id==='toy'?vehicles[vehicles.length-2]:engine;
     const wave=train.id==='passenger'?trainConductorWave(engine):null;
+    const departureMs=wave?TRAIN_DEPARTURE_WAVE_MS:0;
     const freight=train.id==='goods'?freightBounces(vehicles.slice(0,-1),length,size):null;
     const board=train.boarding?trainBoarding(layer,path.getPointAtLength(stop).x+Number(vehicles[0].dataset.offset),size):null;
     if(board)board(0);
-    const t0=performance.now();
+    const t0=performance.now()+departureMs;
     tone(880,.45,{type:'sine',vol:.12,to:1046}); tone(1046,.5,{type:'sine',vol:.12,when:.5});
     function frame(now){
       const elapsed=now-t0;
@@ -2136,7 +2148,7 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
         const angle=Math.atan2(q.y-p.y,q.x-p.x)-Math.PI;
         v.setAttribute('transform',`translate(${p.x} ${p.y}) rotate(${angle*180/Math.PI})`);
         if(trail&&v===emitter)trail(elapsed,p,angle);
-        if(wave&&v===engine)wave(p);
+        if(wave&&v===engine)wave(elapsed,p);
         freight?.get(v)?.(d);
       });
       if(elapsed<travelMs+pauseMs)requestAnimationFrame(frame);
