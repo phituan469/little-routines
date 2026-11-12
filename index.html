@@ -747,13 +747,13 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     {id:'tanker',en:'Gas tanker',sv:'Tankbil',color:'#6FA94D',length:168,width:64}
   ];
   const TRAINS = [
-    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#EE4F43',accent:'#FFCF28',exhaust:{x:23,y:-58,color:'#C3CAD1',highlight:'#E2E6EA',interval:260}},
+    {id:'steam',en:'Steam locomotive',sv:'Ånglok',color:'#EE4F43',accent:'#FFCF28',exhaust:{x:23,y:-58,color:'#8B97A3',highlight:'#B8C2CB',interval:260/1.5}},
     {id:'passenger',en:'Passenger',sv:'Persontåg',color:'#258FF2',accent:'#FFF1C4'},
     {id:'goods',en:'Goods',sv:'Godståg',color:'#FF962B',accent:'#43B76B'},
-    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#F5F8FA',accent:'#216EE8',lapSpeed:1.3},
+    {id:'bullet',en:'Bullet train',sv:'Snabbtåg',color:'#F5F8FA',accent:'#216EE8',lapSpeed:1.5},
     {id:'metro',en:'Metro',sv:'Tunnelbana',color:'#9950E8',accent:'#5AE2DF',boarding:true},
     {id:'tram',en:'Tram',sv:'Spårvagn',color:'#20BB70',accent:'#FFD73D',boarding:true},
-    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#10BAC9',accent:'#FA733B',exhaust:{x:-3,y:-60,color:'#23262C',highlight:'#424650',interval:350}},
+    {id:'diesel',en:'Diesel',sv:'Diesellok',color:'#10BAC9',accent:'#FA733B',exhaust:{x:-3,y:-60,color:'#23262C',highlight:'#424650',interval:350/1.5}},
     {id:'toy',en:'Toy train',sv:'Leksakståg',color:'#F43F9C',accent:'#FFD128'}
   ];
   const DEFAULT_ROUTINES = { morning:['pee','teeth','water','food','water','poop'], night:['food','water','pee','teeth'] };
@@ -2019,7 +2019,8 @@ body.car-version #wrap,body.car-version .friend-tag,body.car-version #stage > .s
     let next=0,cursor=0;
     return (elapsed,pose,angle)=>{
       if(elapsed>=next){
-        next=elapsed+interval;
+        // Keep the requested rate between frames and skip missed emissions.
+        next+=(Math.floor((elapsed-next)/interval)+1)*interval;
         // Don't emit from a train part while it's under the tunnel roof.
         if(!(pose.y>=TRAIN_BOTTOM.y-2&&pose.x>=tunnelLeft&&pose.x<=tunnelRight)){
           const cos=Math.cos(angle),sin=Math.sin(angle);
